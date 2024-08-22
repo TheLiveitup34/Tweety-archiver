@@ -132,7 +132,7 @@ while user == "" and confirm == "":
         continue
 
 
-search_string = "{from: " + user + "}"
+search_string = "(from:" + user + ")"
 path_name += os.sep + user
 if not os.path.exists(path_name):
     os.makedirs(path_name)
@@ -172,8 +172,10 @@ while True:
 
     data = []
     if len(tweets) == 0:
-        exit("Twitter API Limit Reached or No Tweets found Try again")
-
+        print(f"Search was {search_string}")
+        print("Twitter API Limit Reached or No Tweets found Try again")
+        input("\n\nPress Enter to Continue...")
+        continue
     print("Getting Tweets..")
     if not os.path.exists(path_name + "media"):
         os.makedirs(path_name + "media")
