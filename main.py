@@ -153,7 +153,7 @@ while True:
 
     since = input("Enter Since date (leave empty if you dont want since): ")
     if since != "":
-        search_string += "f since:{since}"
+        search_string += f" since:{since}"
     else:
         print("No Since Entered Continuing...\n")
 
