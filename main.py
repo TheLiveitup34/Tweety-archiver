@@ -191,9 +191,6 @@ while True:
     if not os.path.exists(path_name + "media"):
         os.makedirs(path_name + "media")
     for tweet in tweets:
-        if tweet.is_retweet == True:
-            print(f"Skipping retweets")
-            continue
 
         modify_tweet(tweet)
 
