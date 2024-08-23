@@ -190,6 +190,7 @@ while True:
             print(f"Search was {search_string}")
             print("Twitter API Limit Reached or No Tweets found Try again")
             input("\n\nPress Enter to Continue...")
+            cursor = None
             continue
         print("Getting Tweets..")
         if not os.path.exists(path_name + "media"):
