@@ -182,6 +182,8 @@ while True:
         manual_ids = f.read().split("\n")
         f.close()
         for manual in manual_ids:
+            if manual == "":
+                continue
             modify_tweet(app.tweet_detail(manual))
 
  
