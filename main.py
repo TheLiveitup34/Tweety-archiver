@@ -19,7 +19,6 @@ def modify_download(file_name, file_size,downloaded_in_bites):
     return None
 
 def modify_tweet(tweet):
-
     if f"{tweet.id}:{tweet.author.username}" in parsed_ids:
         print(f"{Fore.BLUE}Found Already Parsed ID: {Fore.YELLOW}{tweet.id} {Fore.BLUE}Skiping..{Fore.WHITE}")
         return 
@@ -150,12 +149,20 @@ path_name += os.sep
 ran = 0
 export_name = None
 
+fetched_manual = False
 
 while True:
     search_string = "(from:" + user + ")"
     os.system("clear")
+    parsed_ids = []
+    if os.path.exists(path_name + 'parsed_ids.txt'):
+        f = open(path_name + 'parsed_ids.txt', "r")
+        parsed_ids = f.read().split("\n")
+        f.close()
+
     until = input("Enter Until date (leave empty if you dont want until): ")
-    
+
+
     if until != "":
         search_string += f" until:{until}"
         print(f"Added Until {until} to search")
@@ -168,7 +175,14 @@ while True:
     else:
         print("No Since Entered Continuing...\n")
 
-
+    if os.path.exists(base_path + 'manual.txt') and fetched_manual == False:
+        print(f"{Fore.MAGENTA}\nManual ID's Detected and now scraping...{Fore.WHITE}")
+        fetched_manual = True
+        f = open(base_path + 'manual.txt', "r")
+        manual_ids = f.read().split("\n")
+        f.close()
+        for manual in manual_ids:
+            modify_tweet(app.tweet_detail(manual))
 
  
 
@@ -179,12 +193,6 @@ while True:
             cursor = None
         tweets = app.search(search_string, filter_=SearchFilters.Latest(), cursor=cursor)
         cursor = tweets.cursor
-        parsed_ids = []
-        if os.path.exists(path_name + 'parsed_ids.txt'):
-            f = open(path_name + 'parsed_ids.txt', "r")
-            parsed_ids = f.read().split("\n")
-            f.close()
-
         data = []
         if len(tweets) == 0:
             print(f"Search was {search_string}")
