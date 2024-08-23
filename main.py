@@ -189,7 +189,6 @@ while True:
         if len(tweets) == 0:
             print(f"Search was {search_string}")
             print("Twitter API Limit Reached or No Tweets found Try again")
-            input("\n\nPress Enter to Continue...")
             cursor = None
             continue
         print("Getting Tweets..")
