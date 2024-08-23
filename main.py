@@ -173,28 +173,34 @@ while True:
  
 
     print("Fetching Twitter Search...")
-    tweets = app.search(search_string, filter_=SearchFilters.Latest())
+    cursor = ""
+    while cursor != None:
+        if cursor == "":
+            cursor = None
+        tweets = app.search(search_string, filter_=SearchFilters.Latest(), cursor=cursor)
+        cursor = tweets.cursor
+        parsed_ids = []
+        if os.path.exists(path_name + 'parsed_ids.txt'):
+            f = open(path_name + 'parsed_ids.txt', "r")
+            parsed_ids = f.read().split("\n")
+            f.close()
 
-    parsed_ids = []
-    if os.path.exists(path_name + 'parsed_ids.txt'):
-        f = open(path_name + 'parsed_ids.txt', "r")
-        parsed_ids = f.read().split("\n")
+        data = []
+        if len(tweets) == 0:
+            print(f"Search was {search_string}")
+            print("Twitter API Limit Reached or No Tweets found Try again")
+            input("\n\nPress Enter to Continue...")
+            continue
+        print("Getting Tweets..")
+        if not os.path.exists(path_name + "media"):
+            os.makedirs(path_name + "media")
+        for tweet in tweets:
+
+            modify_tweet(tweet)
+
+        f = open(path_name + 'parsed_ids.txt', "w")
+        f.write("\n".join(parsed_ids))
         f.close()
 
-    data = []
-    if len(tweets) == 0:
-        print(f"Search was {search_string}")
-        print("Twitter API Limit Reached or No Tweets found Try again")
-        input("\n\nPress Enter to Continue...")
-        continue
-    print("Getting Tweets..")
-    if not os.path.exists(path_name + "media"):
-        os.makedirs(path_name + "media")
-    for tweet in tweets:
-
-        modify_tweet(tweet)
-
-    f = open(path_name + 'parsed_ids.txt', "w")
-    f.write("\n".join(parsed_ids))
-    f.close()
+    
     input("\n\nPress Enter to Continue...")
