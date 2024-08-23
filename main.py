@@ -56,12 +56,22 @@ def modify_tweet(tweet):
     if len(urls) > 0:
         print(f"\n{Fore.MAGENTA}Found Twitter Shortner links in Tweet..")
         print(f"{Fore.YELLOW}{urls}{Fore.WHITE}")
-        print(f"\n{Fore.MAGENTA}Going to fetch origin urls...")
+        print(f"\n{Fore.MAGENTA}Going to fetch origin urls...{Fore.WHITE}")
     for url in urls:
-        res = requests.get(url)
-        data_tweet["href_links"].append(res.url)
-        tweet.text = tweet.text.replace(url, res.url)
-        print(f" - {Fore.BLUE}Fetched {Fore.YELLOW}{url} {Fore.BLUE}and found {Fore.YELLOW}{res.url}\n{Fore.BLUE} - Replacing {Fore.YELLOW}{url}{Fore.BLUE} with found {Fore.YELLOW}{res.url}{Fore.WHITE}")
+        res = None
+        actual_url = None
+        try:
+            res = requests.get(url, timeout=5)
+        except Exception as e:
+            error = str(e)
+            actual_url = re.findall("host='(.*?)'", error)[0]
+            print(f"{Fore.YELLOW}Failed to reach domain. {actual_url}{Fore.WHITE}")
+        
+        if res != None:
+            actual_url = res.url
+        data_tweet["href_links"].append(actual_url)
+        tweet.text = tweet.text.replace(url, actual_url)
+        print(f" - {Fore.BLUE}Fetched {Fore.YELLOW}{url} {Fore.BLUE}and found {Fore.YELLOW}{actual_url}\n{Fore.BLUE} - Replacing {Fore.YELLOW}{url}{Fore.BLUE} with found {Fore.YELLOW}{actual_url}{Fore.WHITE}")
 
 
     if len(tweet.media) > 0:
@@ -142,6 +152,7 @@ export_name = None
 
 
 while True:
+    search_string = "(from:" + user + ")"
     os.system("clear")
     until = input("Enter Until date (leave empty if you dont want until): ")
     
