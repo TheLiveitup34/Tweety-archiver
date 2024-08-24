@@ -52,6 +52,9 @@ def modify_tweet(tweet):
 
     # Fetch Urls and convert them to original urls
     urls = re.findall("https://t\.co/[0-9A-Za-z]{0,23}", tweet.text)
+    urls_http = re.findall("http://t\.co/[0-9A-Za-z]{0,23}", tweet.text)
+    if len(urls_http) > len(urls):
+        urls = urls_http
     if len(urls) > 0:
         print(f"\n{Fore.MAGENTA}Found Twitter Shortner links in Tweet..")
         print(f"{Fore.YELLOW}{urls}{Fore.WHITE}")
@@ -198,7 +201,7 @@ while True:
         data = []
         if len(tweets) == 0:
             print(f"Search was {search_string}")
-            print("Twitter API Limit Reached or No Tweets found Try again")
+            print("No Tweets found Try again")
             cursor = None
             continue
         print("Getting Tweets..")
