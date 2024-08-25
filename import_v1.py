@@ -145,23 +145,60 @@ for file in files:
     data = json.loads(f.read())
     f.close()
     tweet_id = data["tweet_id"]
-
+    file_name = data["filename"] + "." + data["extension"]
     if os.path.exists(path_name + "media" + os.sep + str(data["tweet_id"])) == True:
         if os.path.exists(path_name + "media" + os.sep + str(data["tweet_id"]) + os.sep + data["filename"] + "." + data["extension"]) == False:
             shutil.copyfile(v1_path + file, path_name + "media" + os.sep + str(data["tweet_id"]) + os.sep + data["filename"] + "." + data["extension"])
+            f = open(path_name + "media" + os.sep + str(data["tweet_id"]) + os.sep + str(data["tweet_id"]) + ".json", "r+")
+            data_tweet = json.loads(f.read())
+            if file_name not in data_tweet["media_files"]:
+                data_tweet["media_files"].append(file_name)
+                f.seek(0)
+                f.write(json.dumps(data_tweet, indent=4))
+                f.truncate()
+            f.close()
             print(f"Found and copied {tweet_id}")
         else:
             print(f"Image already exists {tweet_id}")
+            f = open(path_name + "media" + os.sep + str(data["tweet_id"]) + os.sep + str(data["tweet_id"]) + ".json", "r+")
+            data_tweet = json.loads(f.read())
+            if file_name not in data_tweet["media_files"]:
+                data_tweet["media_files"].append(file_name)
+                f.seek(0)
+                f.write(json.dumps(data_tweet, indent=4))
+                f.truncate()
+            f.close()
     else:
         try:
             modify_tweet(app.tweet_detail(data["tweet_id"]))
             if os.path.exists(path_name + "media" + os.sep + str(data["tweet_id"]) + os.sep + data["filename"] + "." + data["extension"]) == False:
                 shutil.copyfile(v1_path + file, path_name + "media" + os.sep + str(data["tweet_id"]) + os.sep + data["filename"] + "." + data["extension"])
                 print(f"Found and copied {tweet_id}")
+                f = open(path_name + "media" + os.sep + str(data["tweet_id"]) + os.sep + str(data["tweet_id"]) + ".json", "r+")
+                data_tweet = json.loads(f.read())
+                if file_name not in data_tweet["media_files"]:
+                    data_tweet["media_files"].append(file_name)
+                    f.seek(0)
+                    f.write(json.dumps(data_tweet, indent=4))
+                    f.truncate()
+                f.close()
             else:
                 print(f"Image already exists {tweet_id}")
+                f = open(path_name + "media" + os.sep + str(data["tweet_id"]) + os.sep + str(data["tweet_id"]) + ".json", "r+")
+                data_tweet = json.loads(f.read())
+                if file_name not in data_tweet["media_files"]:
+                    data_tweet["media_files"].append(file_name)
+                    f.seek(0)
+                    f.write(json.dumps(data_tweet, indent=4))
+                    f.truncate()
+                f.close()
+
+                
         except Exception as e:
-            print(f"Error occured when attempting to fetch not found tweet: {e}")
+            print(f"{Fore.CYAN}Failed Tweet ID: {Fore.YELLOW}{tweet_id}{Fore.WHITE}")
+            print(f"{Fore.RED}Error occured when attempting to fetch not found tweet: {Fore.YELLOW}{e}{Fore.WHITE}")
+            if "Rate limit exceeded" in str(e):
+                    exit()
     
     f = open(path_name + 'parsed_ids.txt', "w")
     f.write("\n".join(parsed_ids))
