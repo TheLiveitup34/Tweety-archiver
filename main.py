@@ -95,6 +95,8 @@ def modify_tweet(tweet):
                 data_tweet["quoted_tweet_id"] = tweet.quoted_tweet.id
             except Exception as e:
                 print(f"{Fore.RED}Failed to Modify Quoted Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if "Rate limit exceeded" in str(e):
+                    exit()
             
 
 
@@ -106,6 +108,8 @@ def modify_tweet(tweet):
                 data_tweet["replied_to_id"] = tweet.replied_to.id
             except Exception as e:
                 print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if "Rate limit exceeded" in str(e):
+                    exit()
 
     f = open(path_name + "media" + os.sep + tweet.id + os.sep + tweet.id + ".json", "w")
     f.write(json.dumps(data_tweet, indent=4))
@@ -197,7 +201,8 @@ while True:
                 modify_tweet(app.tweet_detail(manual))
             except Exception as e:
                 print(f"{Fore.RED}Failed to Modify manual Tweet id:{Fore.YELLOW}{manual}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-
+                if "Rate limit exceeded" in str(e):
+                    exit()
  
 
     print("Fetching Twitter Search...")
@@ -210,6 +215,8 @@ while True:
         except Exception as e:
             print(f"Search was {search_string}")
             print(f"{Fore.RED}Twitter Search failed for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+            if "Rate limit exceeded" in str(e):
+                    exit()
             input("\n\nPress Enter to Continue...")
             continue
         cursor = tweets.cursor
@@ -228,6 +235,8 @@ while True:
                 modify_tweet(tweet)
             except Exception as e:
                 print(f"{Fore.RED}Failed to Modify searched Tweet id:{Fore.YELLOW}{tweet.id}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if "Rate limit exceeded" in str(e):
+                    exit()
 
         f = open(path_name + 'parsed_ids.txt', "w")
         f.write("\n".join(parsed_ids))
