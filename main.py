@@ -90,16 +90,22 @@ def modify_tweet(tweet):
     if tweet.is_quoted == True:
         if tweet.quoted_tweet != None:
             print(f"{Fore.MAGENTA}Quoted Tweet Detected and fetching...")
-            modify_tweet(tweet.quoted_tweet)
-            data_tweet["quoted_tweet_id"] = tweet.quoted_tweet.id
+            try:
+                modify_tweet(tweet.quoted_tweet)
+                data_tweet["quoted_tweet_id"] = tweet.quoted_tweet.id
+            except Exception as e:
+                print(f"{Fore.RED}Failed to Modify Quoted Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
             
 
 
     if tweet.is_reply == True:
         if tweet.replied_to != None:
             print(f"{Fore.MAGENTA}Reply Tweet Detected and fetching...")
-            modify_tweet(tweet.replied_to)
-            data_tweet["replied_to_id"] = tweet.replied_to.id
+            try:
+                modify_tweet(tweet.replied_to)
+                data_tweet["replied_to_id"] = tweet.replied_to.id
+            except Exception as e:
+                print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
 
     f = open(path_name + "media" + os.sep + tweet.id + os.sep + tweet.id + ".json", "w")
     f.write(json.dumps(data_tweet, indent=4))
@@ -187,7 +193,10 @@ while True:
         for manual in manual_ids:
             if manual == "":
                 continue
-            modify_tweet(app.tweet_detail(manual))
+            try:
+                modify_tweet(app.tweet_detail(manual))
+            except Exception as e:
+                print(f"{Fore.RED}Failed to Modify manual Tweet id:{Fore.YELLOW}{manual}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
 
  
 
@@ -196,12 +205,18 @@ while True:
     while cursor != None:
         if cursor == "":
             cursor = None
-        tweets = app.search(search_string, filter_=SearchFilters.Latest(), cursor=cursor)
+        try:
+            tweets = app.search(search_string, filter_=SearchFilters.Latest(), cursor=cursor)
+        except Exception as e:
+            print(f"Search was {search_string}")
+            print(f"{Fore.RED}Twitter Search failed for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+            input("\n\nPress Enter to Continue...")
+            continue
         cursor = tweets.cursor
         data = []
         if len(tweets) == 0:
             print(f"Search was {search_string}")
-            print("No Tweets found Try again")
+            print("No Tweets Found continuing...")
             cursor = None
             continue
         print("Getting Tweets..")
@@ -209,7 +224,10 @@ while True:
             os.makedirs(path_name + "media")
         for tweet in tweets:
 
-            modify_tweet(tweet)
+            try:
+                modify_tweet(tweet)
+            except Exception as e:
+                print(f"{Fore.RED}Failed to Modify searched Tweet id:{Fore.YELLOW}{tweet.id}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
 
         f = open(path_name + 'parsed_ids.txt', "w")
         f.write("\n".join(parsed_ids))
