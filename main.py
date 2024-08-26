@@ -40,6 +40,7 @@ def modify_tweet(tweet):
         "quote_counts": tweet.quote_counts,
         "reply_counts": tweet.reply_counts,
         "retweet_counts": tweet.retweet_counts,
+        "tweet_source": tweet.source
         "is_quoted": tweet.is_quoted,
         "is_reply": tweet.is_reply,
         "href_links": [],
