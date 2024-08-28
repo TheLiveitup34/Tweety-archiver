@@ -56,7 +56,7 @@ def modify_tweet(tweet):
         "is_reply": tweet.is_reply,
         "href_links": [],
         "media_files": [],
-        "poll_data": [],
+        "poll_data": {},
         "tweet_raw": tweet.text,
         "tweet_parsed": ""
     }
@@ -137,18 +137,17 @@ def modify_tweet(tweet):
         for choices in tweet.pool.choices:
            data_tweet["poll_data"]["choices"].append({
                "name": choices.name, 
-                "value": choices.name, 
+                "value": choices.value, 
                 "key": choices.key, 
                 "counts": choices.counts
             })
-        data_tweet["poll_data"]["end_time"] = tweet.pool.end_time
-        data_tweet["poll_data"]["last_updated_time"] = tweet.pool.last_updated_time
+        data_tweet["poll_data"]["end_time"] = str(tweet.pool.end_time)
+        data_tweet["poll_data"]["last_updated_time"] = str(tweet.pool.last_updated_time)
         data_tweet["poll_data"]["duration"] = tweet.pool.duration
         data_tweet["poll_data"]["user_ref"] = []
         for user_ref in tweet.pool.user_ref:
             data_tweet["poll_data"]["user_ref"].append(user_ref.username)
         data_tweet["poll_data"]["is_final"] = tweet.pool.is_final
-        
 
     # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
     f = open(path_name + "media" + os.sep + tweet.id + os.sep + tweet.id + ".json", "w")
@@ -256,7 +255,7 @@ while True:
                 print(f"{Fore.RED}Failed to Modify manual Tweet id:{Fore.YELLOW}{manual}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                 if "Rate limit exceeded" in str(e):
                     exit()
- 
+
     # Starts Search loop for twitter searches to navigate pages
     print("Fetching Twitter Search...")
     cursor = ""

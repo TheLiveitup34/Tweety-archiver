@@ -57,7 +57,7 @@ def modify_tweet(tweet):
         "is_reply": tweet.is_reply,
         "href_links": [],
         "media_files": [],
-        "poll_data": [],
+        "poll_data": {},
         "tweet_raw": tweet.text,
         "tweet_parsed": ""
     }
@@ -128,7 +128,7 @@ def modify_tweet(tweet):
                 print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                 if "Rate limit exceeded" in str(e):
                     exit()
-        # Checks if tweet Poll exists in tweet
+    # Checks if tweet Poll exists in tweet
     if tweet.pool != None:
         data_tweet["poll_data"]["id"] = tweet.pool.id
         data_tweet["poll_data"]["name"] = tweet.pool.name
@@ -137,12 +137,12 @@ def modify_tweet(tweet):
         for choices in tweet.pool.choices:
            data_tweet["poll_data"]["choices"].append({
                "name": choices.name, 
-                "value": choices.name, 
+                "value": choices.value, 
                 "key": choices.key, 
                 "counts": choices.counts
             })
-        data_tweet["poll_data"]["end_time"] = tweet.pool.end_time
-        data_tweet["poll_data"]["last_updated_time"] = tweet.pool.last_updated_time
+        data_tweet["poll_data"]["end_time"] = str(tweet.pool.end_time)
+        data_tweet["poll_data"]["last_updated_time"] = str(tweet.pool.last_updated_time)
         data_tweet["poll_data"]["duration"] = tweet.pool.duration
         data_tweet["poll_data"]["user_ref"] = []
         for user_ref in tweet.pool.user_ref:
