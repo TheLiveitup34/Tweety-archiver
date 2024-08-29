@@ -22,16 +22,19 @@ def modify_download(file_name, file_size,downloaded_in_bites):
     return None
 
 # This funciton modifies the tweet and fetches new tweets recursivly
-def modify_tweet(tweet):
+def modify_tweet(tweet, subtweet=False, parent_id=None):
 
+    current_id = tweet.id
+    if parent_id != None:
+        current_id = parent_id
     # Paresed ID checker
     if f"{tweet.id}:{tweet.author.username}" in parsed_ids:
         print(f"{Fore.BLUE}Found Already Parsed ID: {Fore.YELLOW}{tweet.id} {Fore.BLUE}Skiping..{Fore.WHITE}")
         return 
     
     # Establishing a path for the media to be stored
-    if not os.path.exists(path_name + "media" + os.sep + tweet.id):
-        os.makedirs(path_name + "media" + os.sep + tweet.id)
+    if not os.path.exists(path_name + "media" + os.sep + current_id):
+        os.makedirs(path_name + "media" + os.sep + current_id)
 
     # Stores the cached id
     parsed_ids.append(f"{tweet.id}:{tweet.author.username}")
@@ -98,7 +101,7 @@ def modify_tweet(tweet):
         for media in tweet.media:
            file_name = media.download(None, modify_download)
            data_tweet["media_files"].append(file_name)
-           shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + tweet.id + os.sep + file_name)
+           shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
            os.remove(base_path + file_name)
            
     data_tweet["tweet_parsed"] = tweet.text
@@ -108,7 +111,7 @@ def modify_tweet(tweet):
         if tweet.quoted_tweet != None:
             print(f"{Fore.MAGENTA}Quoted Tweet Detected and fetching...")
             try:
-                modify_tweet(tweet.quoted_tweet)
+                data_tweet["quoted_tweet"] = modify_tweet(tweet.quoted_tweet, True, tweet.id)
                 data_tweet["quoted_tweet_id"] = tweet.quoted_tweet.id
             except Exception as e:
                 print(f"{Fore.RED}Failed to Modify Quoted Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -123,7 +126,7 @@ def modify_tweet(tweet):
         if tweet.replied_to != None:
             print(f"{Fore.MAGENTA}Reply Tweet Detected and fetching...")
             try:
-                modify_tweet(tweet.replied_to)
+                data_tweet["replied_to_tweet"] = modify_tweet(tweet.replied_to, True, tweet.id)
                 data_tweet["replied_to_id"] = tweet.replied_to.id
             except Exception as e:
                 print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -145,19 +148,22 @@ def modify_tweet(tweet):
                 "key": choices.key, 
                 "counts": choices.counts
             })
+           
         data_tweet["poll_data"]["end_time"] = str(tweet.pool.end_time)
         data_tweet["poll_data"]["last_updated_time"] = str(tweet.pool.last_updated_time)
         data_tweet["poll_data"]["duration"] = tweet.pool.duration
         data_tweet["poll_data"]["user_ref"] = []
+
         for user_ref in tweet.pool.user_ref:
             data_tweet["poll_data"]["user_ref"].append(user_ref.username)
         data_tweet["poll_data"]["is_final"] = tweet.pool.is_final
 
-    # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
-    f = open(path_name + "media" + os.sep + tweet.id + os.sep + tweet.id + ".json", "w")
-    f.write(json.dumps(data_tweet, indent=4))
-    f.close()
-    return None
+    if subtweet == False:
+        # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
+        f = open(path_name + "media" + os.sep + tweet.id + os.sep + tweet.id + ".json", "w")
+        f.write(json.dumps(data_tweet, indent=4))
+        f.close()
+    return data_tweet
 
 # Defines Paths for the app to use for path traversial
 base_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
