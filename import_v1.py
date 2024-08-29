@@ -115,6 +115,8 @@ def modify_tweet(tweet):
                 print(f"{Fore.RED}Failed to Modify Quoted Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                 if "Rate limit exceeded" in str(e):
                     exit()
+        else:
+            print(f"{Fore.RED}Failed to Fetch Quote Tweet due to Quoted Tweet Provided in None Value{Fore.WHITE}")
             
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
@@ -128,6 +130,8 @@ def modify_tweet(tweet):
                 print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                 if "Rate limit exceeded" in str(e):
                     exit()
+        else:
+            print(f"{Fore.RED}Failed to Fetch Replied Tweet due to Replied Tweet Provied in None value")
     # Checks if tweet Poll exists in tweet
     if tweet.pool != None:
         data_tweet["poll_data"]["id"] = tweet.pool.id
