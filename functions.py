@@ -23,7 +23,7 @@ def modify_download(file_name, file_size,downloaded_in_bites):
     return None
 
 # This funciton modifies the tweet and fetches new tweets recursivly
-def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_id_data=[]):
+def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_id_data=[], app=None):
   
     if len(parsed_id_data) > 0:
         for parsed_id in parsed_id_data:
@@ -66,6 +66,7 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
         "is_reply": tweet.is_reply,
         "href_links": [],
         "media_files": [],
+        "tweets_quoting": [],
         "poll_data": {},
         "tweet_raw": tweet.text,
         "tweet_parsed": "",
@@ -119,7 +120,7 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
         if tweet.quoted_tweet != None:
             print(f"{Fore.MAGENTA}Quoted Tweet Detected and fetching...")
             try:
-                data_tweet["quoted_tweet"] = modify_tweet(tweet.quoted_tweet, True, parent_id=parent_id, path_name=path_name)
+                data_tweet["quoted_tweet"] = modify_tweet(tweet.quoted_tweet, True, parent_id=parent_id, path_name=path_name, app=app)
                 data_tweet["quoted_tweet_id"] = tweet.quoted_tweet.id
             except Exception as e:
                 print(f"{Fore.RED}Failed to Modify Quoted Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -127,14 +128,32 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
                     exit()
         else:
             print(f"{Fore.RED}Failed to Fetch Quote Tweet due to Quoted Tweet Provided in None Value{Fore.WHITE}")
-            
+    
+    if tweet.quote_counts > 0 and subtweet == False:
+        quoted_cursor = ""
+        while quoted_cursor != None:
+            if quoted_cursor == "":
+                quoted_cursor = None
+
+            try:
+                quotes = app.get_tweet_quotes(tweet, cursor=quoted_cursor)
+                quoted_cursor = quotes.cursor
+            except Exception as e:
+                print(f"{Fore.RED}Failed to Fetch Quoted Tweets of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if "Rate limit exceeded" in str(e):
+                    exit()
+            if len(quotes) == 0:
+                quoted_cursor = None
+                continue
+            for quote in quotes:
+                data_tweet["tweets_quoting"].append(modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app))
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
     if tweet.is_reply == True and subtweet == False:
         print(f"{Fore.MAGENTA}Reply to Tweet Detected and fetching...")
         try:
             replied_to = tweet.get_reply_to()
-            data_tweet["replied_to_tweet"] = modify_tweet(replied_to, True, parent_id=parent_id,path_name=path_name)
+            data_tweet["replied_to_tweet"] = modify_tweet(replied_to, True, parent_id=parent_id,path_name=path_name, app=app)
             data_tweet["replied_to_id"] = replied_to.id
         except Exception as e:
             print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -189,7 +208,7 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
             for comment in comments:
                 for tweetComment in comment.tweets:
                     try:
-                        tweet_comment_data = modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name)
+                        tweet_comment_data = modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name, app=app)
                         if tweet_comment_data != None:
                             data_tweet["comments"].append(tweet_comment_data)
                     except Exception as e:

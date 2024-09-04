@@ -78,7 +78,7 @@ def main():
             # Tries and catches to fetch the tweet if not found within scraped tweet
             try:
                 # Scrapes the Tweet
-                temp =  modify_tweet(app.tweet_detail(data["tweet_id"]), path_name=path_name, parsed_id_data=parsed_id_data)
+                temp =  modify_tweet(app.tweet_detail(data["tweet_id"]), path_name=path_name, parsed_id_data=parsed_id_data, app=app)
                 if temp != None:
                     for ids in temp:
                         if ids not in parsed_id_data:

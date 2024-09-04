@@ -119,7 +119,7 @@ def main():
                 if manual == "":
                     continue
                 try:
-                    temp = modify_tweet(app.tweet_detail(manual), path_name=path_name, parsed_id_data=parsed_id_data)
+                    temp = modify_tweet(app.tweet_detail(manual), path_name=path_name, parsed_id_data=parsed_id_data, app=app)
                     if temp != None:
                         for ids in temp:
                             if ids not in parsed_id_data:
@@ -164,7 +164,7 @@ def main():
             # Loops through tweets and tries to modify them
             for tweet in tweets:
                 try:
-                    temp = modify_tweet(tweet, path_name=path_name, parsed_id_data=parsed_id_data)
+                    temp = modify_tweet(tweet, path_name=path_name, parsed_id_data=parsed_id_data, app=app)
                     if temp != None:
                         for ids in temp:
                             if ids not in parsed_id_data:
