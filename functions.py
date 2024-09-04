@@ -130,18 +130,16 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
             
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
-    if tweet.is_reply == True:
-        if tweet.replied_to != None:
-            print(f"{Fore.MAGENTA}Reply Tweet Detected and fetching...")
-            try:
-                data_tweet["replied_to_tweet"] = modify_tweet(tweet.replied_to, True, parent_id=parent_id,path_name=path_name)
-                data_tweet["replied_to_id"] = tweet.replied_to.id
-            except Exception as e:
-                print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                if "Rate limit exceeded" in str(e):
-                    exit()
-        else:
-            print(f"{Fore.RED}Failed to Fetch Replied Tweet due to Replied Tweet Provied in None value{Fore.WHITE}")
+    if tweet.is_reply == True and subtweet == False:
+        print(f"{Fore.MAGENTA}Reply to Tweet Detected and fetching...")
+        try:
+            replied_to = tweet.get_reply_to()
+            data_tweet["replied_to_tweet"] = modify_tweet(replied_to, True, parent_id=parent_id,path_name=path_name)
+            data_tweet["replied_to_id"] = replied_to.id
+        except Exception as e:
+            print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+            if "Rate limit exceeded" in str(e):
+                exit()
 
     # Checks if tweet Poll exists in tweet
     if tweet.pool != None:
@@ -166,37 +164,38 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
             data_tweet["poll_data"]["user_ref"].append(user_ref.username)
         data_tweet["poll_data"]["is_final"] = tweet.pool.is_final
     
-    # Start comment Loop
-    comment_cursor = ""
-    if subtweet == False:
-        print(f"\n{Fore.MAGENTA}Attempting to fetch comments...{Fore.WHITE}")
-    else:
-        print(f"\n{Fore.MAGENTA}Attempting to fetch comments for subtweet id: {Fore.YELLOW}{current_id}{Fore.MAGENTA}...{Fore.WHITE}")
-    while comment_cursor != None:
-        if comment_cursor == "":
-            comment_cursor = None
-        
-        try:
-            comments = tweet.get_comments(cursor=comment_cursor)
-            comment_cursor = comments.cursor
-        except Exception as e:
-            if "Rate limit exceeded" in str(e):
+    if tweet.reply_counts > 0:
+        # Start comment Loop
+        comment_cursor = ""
+        if subtweet == False:
+            print(f"\n{Fore.MAGENTA}Attempting to fetch comments...{Fore.WHITE}")
+        else:
+            print(f"\n{Fore.MAGENTA}Attempting to fetch comments for subtweet id: {Fore.YELLOW}{current_id}{Fore.MAGENTA}...{Fore.WHITE}")
+        while comment_cursor != None:
+            if comment_cursor == "":
+                comment_cursor = None
+            
+            try:
+                comments = tweet.get_comments(cursor=comment_cursor)
+                comment_cursor = comments.cursor
+            except Exception as e:
+                print(f"{Fore.RED}Attempt to Fetch comments failed for the following Reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if "Rate limit exceeded" in str(e):
                     exit()
-            print(f"{Fore.RED}Attempt to Fetch comments failed for the following Reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-            continue
-        if len(comments) == 0:
-            comment_cursor = None
-            continue
-        for comment in comments:
-            for tweetComment in comment.tweets:
-                try:
-                    tweet_comment_data = modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name)
-                    if tweet_comment_data != None:
-                        data_tweet["comments"].append(tweet_comment_data)
-                except Exception as e:
-                    print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                    if "Rate limit exceeded" in str(e):
-                        exit()
+                continue
+            if len(comments) == 0:
+                comment_cursor = None
+                continue
+            for comment in comments:
+                for tweetComment in comment.tweets:
+                    try:
+                        tweet_comment_data = modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name)
+                        if tweet_comment_data != None:
+                            data_tweet["comments"].append(tweet_comment_data)
+                    except Exception as e:
+                        print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                        if "Rate limit exceeded" in str(e):
+                            exit()
             
         
     
