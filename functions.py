@@ -1,5 +1,6 @@
 import re
 import json
+import time
 import requests
 import shutil
 import os
@@ -206,3 +207,35 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
         f.close()
         return parsed_ids
     return data_tweet
+
+def fetch_username():
+    confirm = ""
+    user = ""
+    while user == "":
+        # Clear for a clean look 
+
+        # Username input and validation
+        user = input(f"{Fore.YELLOW}Enter Target username: {Fore.WHITE}")
+        if user == "":
+            print(f"{Fore.RED}No {Fore.YELLOW}username{Fore.RED} was provided...{Fore.WHITE}")
+            time.sleep(3)
+            continue
+        user = user.lower()
+
+        # Confirms if you typed the correct username
+    return user
+
+def confirm_data(msg =""):
+
+    confirm = ""
+    while confirm == "":
+        confirm = input(f"\n{Fore.WHITE}{msg} {Fore.WHITE}({Fore.GREEN}y{Fore.WHITE}/{Fore.RED}n{Fore.WHITE}): ")
+        confirm = confirm.lower()
+        if confirm != "n" and confirm != "y":
+            confirm = ""
+            print(f"{Fore.RED}Invalid Response Type trying again...{Fore.WHITE}")
+            continue
+        if confirm == "n":
+            confirm = ""
+            return False
+    return True
