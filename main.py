@@ -76,7 +76,7 @@ def main():
         until_validated = False
         while until_validated == False:
             os.system('clear')
-            until = input(f"{Fore.MAGENTA}Enter Until date ({Fore.YELLOW}leave empty if you dont want until{Fore.MAGENTA}):{Fore.WHITE} ")
+            until = input(f"{Fore.MAGENTA}Enter Until date (YYYY-MM-DD) ({Fore.YELLOW}leave empty if you dont want until{Fore.MAGENTA}):{Fore.WHITE} ")
             if until != "":
                 until_validated = confirm_data(f"You have Entered '{Fore.YELLOW}{until}{Fore.WHITE}' is this correct?")
             else:
@@ -94,7 +94,7 @@ def main():
         while since_validated == False:
             os.system("clear")
             # Get Since input if wanted
-            since = input(f"{Fore.MAGENTA}Enter Since date ({Fore.YELLOW}leave empty if you dont want since{Fore.MAGENTA}):{Fore.WHITE} ")
+            since = input(f"{Fore.MAGENTA}Enter Since date (YYYY-MM-DD) ({Fore.YELLOW}leave empty if you dont want since{Fore.MAGENTA}):{Fore.WHITE} ")
 
             if since != "":
                 since_validated = confirm_data(f"You have Entered '{Fore.YELLOW}{until}{Fore.WHITE}' is this correct?")
