@@ -156,27 +156,27 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
             try:
                 data_tweet["retweet_users"] = modify_tweet(tweet.retweet_counts, True, parent_id=parent_id, path_name=path_name, app=app)
             except Exception as e:
-                print(f"{Fore.RED}Failed to Modify Quoted Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                print(f"{Fore.RED}Failed to Modify Retweet User List for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                 if "Rate limit exceeded" in str(e):
                     exit()
         else:
             print(f"{Fore.RED}Failed to Fetch Retweet User List due to an unknown reason{Fore.WHITE}")
 
     if tweet.retweet_counts > 0:
-            retweet_cursor = ""
-            while retweet_cursor != None:
-                if retweet_cursor == "":
-                    retweet_cursor = None
+            retweets_cursor = ""
+            while retweets_cursor != None:
+                if retweets_cursor == "":
+                    retweets_cursor = None
 
                 try:
-                    retweet = app.get_tweet_retweet(tweet, cursor=retweet_cursor)
-                    retweet_cursor = retweet.cursor
+                    retweet = app.get_tweet_retweets(tweet, cursor=retweets_cursor)
+                    retweets_cursor = retweets.cursor
                 except Exception as e:
                     print(f"{Fore.RED}Failed to Fetch Retweets User List of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                     if "Rate limit exceeded" in str(e):
                         exit()
                 if len(retweet) == 0:
-                    retweet_cursor = None
+                    retweets_cursor = None
                     continue
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
