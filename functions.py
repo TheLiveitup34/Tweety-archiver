@@ -151,18 +151,6 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
 
     # Checks if tweet has any retweets and tries to download the user list
     if tweet.retweet_counts > 0:
-        if tweet.retweet_counts != None:
-            print(f"{Fore.MAGENTA}Retweet User List Detected and fetching...")
-            try:
-                data_tweet["retweet_users"] = modify_tweet(tweet.retweet_counts, True, parent_id=parent_id, path_name=path_name, app=app)
-            except Exception as e:
-                print(f"{Fore.RED}Failed to Modify Retweet User List for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                if "Rate limit exceeded" in str(e):
-                    exit()
-        else:
-            print(f"{Fore.RED}Failed to Fetch Retweet User List due to an unknown reason{Fore.WHITE}")
-
-    if tweet.retweet_counts > 0:
             retweets_cursor = ""
             while retweets_cursor != None:
                 if retweets_cursor == "":
@@ -178,6 +166,8 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
                 if len(retweet) == 0:
                     retweets_cursor = None
                     continue
+                for retweet in retweets:
+                    data_tweet["retweet_users"].append(modify_tweet(retweet, True, parent_id=parent_id, path_name=path_name, app=app))
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
     if tweet.is_reply == True and subtweet == False:
