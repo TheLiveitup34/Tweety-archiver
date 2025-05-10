@@ -142,7 +142,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 quoted_cursor = None
 
             try:
-                quotes = app.get_tweet_quotes(tweet, cursor=quoted_cursor)
+                quotes = await app.get_tweet_quotes(tweet, cursor=quoted_cursor)
                 quoted_cursor = quotes.cursor
             except Exception as e:
                 print(f"{Fore.RED}Failed to Fetch Quoted Tweets of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
