@@ -120,7 +120,8 @@ async def main():
                 if manual == "":
                     continue
                 try:
-                    temp = await modify_tweet(app.tweet_detail(manual), path_name=path_name, parsed_id_data=parsed_id_data, app=app)
+                    temp2 = await app.tweet_detail(manual)
+                    temp = await modify_tweet(temp2, path_name=path_name, parsed_id_data=parsed_id_data, app=app)
                     if temp != None:
                         for ids in temp:
                             if ids not in parsed_id_data:
