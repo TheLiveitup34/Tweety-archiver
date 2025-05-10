@@ -6,12 +6,12 @@
 import os
 import json
 import shutil
-from tweety import Twitter
+from tweety import TwitterAsync
 from colorama import Fore
 from functions import modify_tweet
 
 
-def main():
+async def main():
     # Defines Paths for the app to use for path traversial
     path_name = os.path.dirname(os.path.realpath(__file__)) + os.sep + "scraped"
     v1_path = os.path.dirname(os.path.realpath(__file__)) + os.sep + "v1" + os.sep
@@ -22,7 +22,7 @@ def main():
     path_name += os.sep + "clubpenguin" + os.sep
 
     # Start of Tweeter API Session
-    app = Twitter("session")
+    app = TwitterAsync("session")
     # Start calling to allow you to login Dynamicly Session is saved
     app.start("", "")
 
@@ -78,7 +78,7 @@ def main():
             # Tries and catches to fetch the tweet if not found within scraped tweet
             try:
                 # Scrapes the Tweet
-                temp =  modify_tweet(app.tweet_detail(data["tweet_id"]), path_name=path_name, parsed_id_data=parsed_id_data, app=app)
+                temp =  await modify_tweet(app.tweet_detail(data["tweet_id"]), path_name=path_name, parsed_id_data=parsed_id_data, app=app)
                 if temp != None:
                     for ids in temp:
                         if ids not in parsed_id_data:
@@ -111,6 +111,6 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        asyncio.run(main())
     except KeyboardInterrupt:
         print(f"\n{Fore.RED}Detected User Keyboard Interuption Ending Program..")
