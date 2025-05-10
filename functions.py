@@ -4,6 +4,7 @@ import time
 import requests
 import shutil
 import os
+import asyncio
 from colorama import Fore
 
 
@@ -15,7 +16,7 @@ parsed_ids = []
 
 
 # This function does nothing but print a verbose information of the file being downloaded may have error displayed when running
-def modify_download(file_name, file_size,downloaded_in_bites):
+async def modify_download(file_name, file_size,downloaded_in_bites):
     if file_size == downloaded_in_bites:
         print(f"{Fore.BLUE}Downloaded {Fore.YELLOW}{file_name} {Fore.MAGENTA}{file_size // 1024}{Fore.BLUE}Mb{Fore.BLUE} Successfully...{Fore.WHITE}\n")
     else:
@@ -23,7 +24,7 @@ def modify_download(file_name, file_size,downloaded_in_bites):
     return None
 
 # This funciton modifies the tweet and fetches new tweets recursivly
-def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_id_data=[], app=None):
+async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_id_data=[], app=None):
   
     if len(parsed_id_data) > 0:
         for parsed_id in parsed_id_data:
@@ -113,7 +114,7 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
     if len(tweet.media) > 0:
         print(f"\n{Fore.MAGENTA}Found and Downloading All Media...{Fore.WHITE}")
         for media in tweet.media:
-           file_name = media.download(None, modify_download)
+           file_name = await media.download(None, modify_download)
            data_tweet["media_files"].append(file_name)
            shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
            os.remove(base_path + file_name)
@@ -125,7 +126,7 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
         if tweet.quoted_tweet != None:
             print(f"{Fore.MAGENTA}Quoted Tweet Detected and fetching...")
             try:
-                data_tweet["quoted_tweet"] = modify_tweet(tweet.quoted_tweet, True, parent_id=parent_id, path_name=path_name, app=app)
+                data_tweet["quoted_tweet"] = await modify_tweet(tweet.quoted_tweet, True, parent_id=parent_id, path_name=path_name, app=app)
                 data_tweet["quoted_tweet_id"] = tweet.quoted_tweet.id
             except Exception as e:
                 print(f"{Fore.RED}Failed to Modify Quoted Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -151,14 +152,15 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
                 quoted_cursor = None
                 continue
             for quote in quotes:
-                data_tweet["tweets_quoting"].append(modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app))
+                tweetquotes = await modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app) 
+                data_tweet["tweets_quoting"].append(tweetquotes)
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
     if tweet.is_reply == True and subtweet == False:
         print(f"{Fore.MAGENTA}Reply to Tweet Detected and fetching...")
         try:
             replied_to = tweet.get_reply_to()
-            data_tweet["replied_to_tweet"] = modify_tweet(replied_to, True, parent_id=parent_id,path_name=path_name, app=app)
+            data_tweet["replied_to_tweet"] = await modify_tweet(replied_to, True, parent_id=parent_id,path_name=path_name, app=app)
             data_tweet["replied_to_id"] = replied_to.id
         except Exception as e:
             print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -200,7 +202,7 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
                 comment_cursor = None
             
             try:
-                comments = tweet.get_comments(cursor=comment_cursor)
+                comments = await tweet.get_comments(cursor=comment_cursor)
                 comment_cursor = comments.cursor
             except Exception as e:
                 print(f"{Fore.RED}Attempt to Fetch comments failed for the following Reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -213,7 +215,7 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
             for comment in comments:
                 for tweetComment in comment.tweets:
                     try:
-                        tweet_comment_data = modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name, app=app)
+                        tweet_comment_data = await modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name, app=app)
                         if tweet_comment_data != None:
                             data_tweet["comments"].append(tweet_comment_data)
                     except Exception as e:
@@ -231,7 +233,7 @@ def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_i
         return parsed_ids
     return data_tweet
 
-def fetch_username():
+async def fetch_username():
     confirm = ""
     user = ""
     while user == "":
@@ -248,7 +250,7 @@ def fetch_username():
         # Confirms if you typed the correct username
     return user
 
-def confirm_data(msg =""):
+async def confirm_data(msg =""):
 
     confirm = ""
     while confirm == "":

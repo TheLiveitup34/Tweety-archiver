@@ -8,10 +8,11 @@ import time
 from functions import modify_tweet
 from functions import fetch_username
 from functions import confirm_data
-from tweety import Twitter
+from tweety import TwitterAsync
+import asyncio
 from tweety.filters import SearchFilters
 from colorama import Fore
-def main():
+async def main():
     # Defines Paths for the app to use for path traversial
     base_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
     path_name = os.path.dirname(os.path.realpath(__file__)) + os.sep + "scraped"
@@ -20,7 +21,7 @@ def main():
     if not os.path.exists(path_name):
         os.makedirs(path_name)
 
-    app = Twitter("session")
+    app = TwitterAsync("session")
     # Start calling to allow you to login Dynamicly Session is saved
     app.start("", "")
 
@@ -36,13 +37,13 @@ def main():
             user = f.read().strip().replace(" ", "")
             f.close()
             print(f"{Fore.MAGENTA}We have detected you used the username: {Fore.YELLOW}{user}{Fore.WHITE}")
-            username_valid = confirm_data(f"Would you still like to use this username?")
+            username_valid = await confirm_data(f"Would you still like to use this username?")
             if username_valid == False:
                 os.remove(path_name + os.sep + "last_used_username.txt")
         else:
-            user = fetch_username()
+            user = asyncio.run(fetch_username())
 
-            username_valid = confirm_data(f"You have entered '{Fore.YELLOW}{user}{Fore.WHITE}' is that correct?")
+            username_valid = await confirm_data(f"You have entered '{Fore.YELLOW}{user}{Fore.WHITE}' is that correct?")
             if username_valid == True:
                 f = open(path_name + os.sep + "last_used_username.txt", "w")
                 f.write(user)
@@ -78,9 +79,9 @@ def main():
             os.system('clear')
             until = input(f"{Fore.MAGENTA}Enter Until date (YYYY-MM-DD) ({Fore.YELLOW}leave empty if you dont want until{Fore.MAGENTA}):{Fore.WHITE} ")
             if until != "":
-                until_validated = confirm_data(f"You have Entered '{Fore.YELLOW}{until}{Fore.WHITE}' is this correct?")
+                until_validated = await confirm_data(f"You have Entered '{Fore.YELLOW}{until}{Fore.WHITE}' is this correct?")
             else:
-                until_validated = confirm_data(f"You have entered {Fore.YELLOW}NOTHING{Fore.WHITE} is that correct?")
+                until_validated = await confirm_data(f"You have entered {Fore.YELLOW}NOTHING{Fore.WHITE} is that correct?")
 
             if until_validated:
                 if until != "":
@@ -97,9 +98,9 @@ def main():
             since = input(f"{Fore.MAGENTA}Enter Since date (YYYY-MM-DD) ({Fore.YELLOW}leave empty if you dont want since{Fore.MAGENTA}):{Fore.WHITE} ")
 
             if since != "":
-                since_validated = confirm_data(f"You have Entered '{Fore.YELLOW}{until}{Fore.WHITE}' is this correct?")
+                since_validated = await confirm_data(f"You have Entered '{Fore.YELLOW}{until}{Fore.WHITE}' is this correct?")
             else:
-                since_validated = confirm_data(f"You have entered {Fore.YELLOW}NOTHING{Fore.WHITE} is that correct?")
+                since_validated = await confirm_data(f"You have entered {Fore.YELLOW}NOTHING{Fore.WHITE} is that correct?")
 
             if since_validated == True:
                 if since != "":
@@ -119,7 +120,7 @@ def main():
                 if manual == "":
                     continue
                 try:
-                    temp = modify_tweet(app.tweet_detail(manual), path_name=path_name, parsed_id_data=parsed_id_data, app=app)
+                    temp = await modify_tweet(app.tweet_detail(manual), path_name=path_name, parsed_id_data=parsed_id_data, app=app)
                     if temp != None:
                         for ids in temp:
                             if ids not in parsed_id_data:
@@ -141,7 +142,7 @@ def main():
                 cursor = None
             # Attempts to do twitter search
             try:
-                tweets = app.search(search_string, filter_=SearchFilters.Latest(), cursor=cursor)
+                tweets = await app.search(search_string, filter_=SearchFilters.Latest(), cursor=cursor)
             except Exception as e:
                 print(f"Search was {search_string}")
                 print(f"{Fore.RED}Twitter Search failed for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -164,7 +165,7 @@ def main():
             # Loops through tweets and tries to modify them
             for tweet in tweets:
                 try:
-                    temp = modify_tweet(tweet, path_name=path_name, parsed_id_data=parsed_id_data, app=app)
+                    temp = await modify_tweet(tweet, path_name=path_name, parsed_id_data=parsed_id_data, app=app)
                     if temp != None:
                         for ids in temp:
                             if ids not in parsed_id_data:
@@ -182,10 +183,8 @@ def main():
         # End of loop for While True: and allows to read data or observe anything 
         input("\n\nPress Enter to Continue...")
 
-
-
 if __name__ == "__main__":
     try:
-        main()
+        asyncio.run(main())
     except KeyboardInterrupt:
         print(f"\n{Fore.RED}Detected User Keyboard Interuption Ending Program..")

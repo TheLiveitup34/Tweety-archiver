@@ -7,9 +7,10 @@ import re
 import json
 import time
 import requests
+import asyncio
 from colorama import Fore
 
-def main():
+async def main():
     # Updates paths to get the tweets already parsed
     path_name = os.path.dirname(os.path.realpath(__file__)) + os.sep + "scraped" + os.sep + "clubpenguin" + os.sep + "media" + os.sep
     dirs = os.listdir(path_name)
@@ -75,6 +76,6 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        asyncio.run(main())
     except KeyboardInterrupt:
         print(f"\n{Fore.RED}Detected User Keyboard Interuption Ending Program..")
