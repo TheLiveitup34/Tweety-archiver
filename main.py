@@ -41,7 +41,7 @@ async def main():
             if username_valid == False:
                 os.remove(path_name + os.sep + "last_used_username.txt")
         else:
-            user = asyncio.run(fetch_username())
+            user = await fetch_username()
 
             username_valid = await confirm_data(f"You have entered '{Fore.YELLOW}{user}{Fore.WHITE}' is that correct?")
             if username_valid == True:
