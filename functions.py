@@ -164,13 +164,13 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     retweets_cursor = None
 
                 try:
-                    retweet = await app.get_tweet_retweets(tweet, cursor=retweets_cursor)
+                    retweets = await app.get_tweet_retweets(tweet, cursor=retweets_cursor)
                     retweets_cursor = retweets.cursor
                 except Exception as e:
                     print(f"{Fore.RED}Failed to Fetch Retweet User List of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                     if "Rate limit exceeded" in str(e):
                         exit()
-                if len(retweet) == 0:
+                if len(retweets) == 0:
                     retweets_cursor = None
                     continue
                 for retweet in retweets:
