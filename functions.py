@@ -56,19 +56,24 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "date": str(tweet.date),
         "username": tweet.author.username,
         "display": tweet.author.name,
-        "likes": tweet.likes,
+        "verified": tweet.author.verified,
+        "protected": tweet.author.protected,
+        "parody": tweet.author.is_parody_account,
+        "automated": tweet.author.is_automated,
+        "community": tweet.community,
+        "community_role": tweet.author.community_role,
         "language": tweet.language,
-        "place": tweet.place,
-        "views": tweet.views,
-        "bookmark_count": tweet.bookmark_count,
-        "quote_counts": tweet.quote_counts,
+        "likes": tweet.likes,
         "reply_counts": tweet.reply_counts,
+        "retweet_counts": tweet.retweet_counts,
+        "quote_counts": tweet.quote_counts,
+        "bookmark_count": tweet.bookmark_count,
+        "views": tweet.views,
+        "tweet_source": tweet.source,
+        "place": tweet.place,
         "has_newer_version": tweet.has_newer_version,
         "has_moderated_replies": tweet.has_moderated_replies,
-        "retweet_counts": tweet.retweet_counts,
-        "tweet_source": tweet.source,
         "is_sensitive": tweet.is_sensitive,
-        "community": tweet.community,
         "community_note": tweet.community_note,
         "is_quoted": tweet.is_quoted,
         "is_reply": tweet.is_reply,
@@ -78,7 +83,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "poll_data": {},
         "tweet_raw": tweet.text,
         "tweet_parsed": "",
-        "comments": []
+        "comments": [],
+        "retweet_users": []
     }
 
     # Fetch Urls and convert them to original urls
@@ -143,6 +149,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 if quoted_cursor == "":
                     quoted_cursor = None
 
+
                 try:
                     quotes = app.get_tweet_quotes(tweet, cursor=quoted_cursor)
                     quoted_cursor = quotes.cursor
@@ -156,6 +163,28 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 for quote in quotes:
                     tweetquotes = await modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app) 
                     data_tweet["tweets_quoting"].append(tweetquotes)
+
+
+    # Checks if tweet has any retweets and tries to download the user list
+    if tweet.retweet_counts > 0:
+            retweets_cursor = ""
+            while retweets_cursor != None:
+                if retweets_cursor == "":
+                    retweets_cursor = None
+
+                try:
+                    retweets = await app.get_tweet_retweets(tweet, cursor=retweets_cursor)
+                    retweets_cursor = retweets.cursor
+                except Exception as e:
+                    print(f"{Fore.RED}Failed to Fetch Retweet User List of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if "Rate limit exceeded" in str(e):
+                        exit()
+                if len(retweets) == 0:
+                    retweets_cursor = None
+                    continue
+                for retweet in retweets:
+                    tweetretweets = await modify_tweet(retweet, True, parent_id=parent_id, path_name=path_name, app=app) 
+                    data_tweet["retweet_users"].append(tweetretweets)
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
     if tweet.is_reply == True and subtweet == False:

@@ -41,7 +41,7 @@ async def main():
             if username_valid == False:
                 os.remove(path_name + os.sep + "last_used_username.txt")
         else:
-            user = asyncio.run(fetch_username())
+            user = await fetch_username()
 
             username_valid = await confirm_data(f"You have entered '{Fore.YELLOW}{user}{Fore.WHITE}' is that correct?")
             if username_valid == True:
@@ -120,7 +120,8 @@ async def main():
                 if manual == "":
                     continue
                 try:
-                    temp = await modify_tweet(app.tweet_detail(manual), path_name=path_name, parsed_id_data=parsed_id_data, app=app)
+                    temp2 = await app.tweet_detail(manual)
+                    temp = await modify_tweet(temp2, path_name=path_name, parsed_id_data=parsed_id_data, app=app)
                     if temp != None:
                         for ids in temp:
                             if ids not in parsed_id_data:
