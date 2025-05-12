@@ -6,6 +6,7 @@ import shutil
 import os
 import asyncio
 from colorama import Fore
+from configs import configurations
 
 
 # Defines Paths for the app to use for path traversial
@@ -25,7 +26,8 @@ async def modify_download(file_name, file_size,downloaded_in_bites):
 
 # This funciton modifies the tweet and fetches new tweets recursivly
 async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_id_data=[], app=None):
-  
+
+    cfg = await configurations()  
     if len(parsed_id_data) > 0:
         for parsed_id in parsed_id_data:
             if parent_id not in parsed_ids:
@@ -140,26 +142,28 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     exit()
         else:
             print(f"{Fore.RED}Failed to Fetch Quote Tweet due to Quoted Tweet Provided in None Value{Fore.WHITE}")
-    
-    if tweet.quote_counts > 0 and subtweet == False:
-        quoted_cursor = ""
-        while quoted_cursor != None:
-            if quoted_cursor == "":
-                quoted_cursor = None
+    if cfg["GrabQuoteRetweets"] == True:
+        if tweet.quote_counts > 0 and subtweet == False:
+            quoted_cursor = ""
+            while quoted_cursor != None:
+                if quoted_cursor == "":
+                    quoted_cursor = None
 
-            try:
-                quotes = await app.get_tweet_quotes(tweet, cursor=quoted_cursor)
-                quoted_cursor = quotes.cursor
-            except Exception as e:
-                print(f"{Fore.RED}Failed to Fetch Quoted Tweets of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                if "Rate limit exceeded" in str(e):
-                    exit()
-            if len(quotes) == 0:
-                quoted_cursor = None
-                continue
-            for quote in quotes:
-                tweetquotes = await modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app) 
-                data_tweet["tweets_quoting"].append(tweetquotes)
+
+                try:
+                    quotes = app.get_tweet_quotes(tweet, cursor=quoted_cursor)
+                    quoted_cursor = quotes.cursor
+                except Exception as e:
+                    print(f"{Fore.RED}Failed to Fetch Quoted Tweets of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if "Rate limit exceeded" in str(e):
+                        exit()
+                if len(quotes) == 0:
+                    quoted_cursor = None
+                    continue
+                for quote in quotes:
+                    tweetquotes = await modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app) 
+                    data_tweet["tweets_quoting"].append(tweetquotes)
+
 
     # Checks if tweet has any retweets and tries to download the user list
     if tweet.retweet_counts > 0:
@@ -217,38 +221,39 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             data_tweet["poll_data"]["user_ref"].append(user_ref.username)
         data_tweet["poll_data"]["is_final"] = tweet.pool.is_final
     
-    if tweet.reply_counts > 0:
-        # Start comment Loop
-        comment_cursor = ""
-        if subtweet == False:
-            print(f"\n{Fore.MAGENTA}Attempting to fetch comments...{Fore.WHITE}")
-        else:
-            print(f"\n{Fore.MAGENTA}Attempting to fetch comments for subtweet id: {Fore.YELLOW}{current_id}{Fore.MAGENTA}...{Fore.WHITE}")
-        while comment_cursor != None:
-            if comment_cursor == "":
-                comment_cursor = None
+    if cfg["GrabReplies"] == True:   
+        if tweet.reply_counts > 0:
+            # Start comment Loop
+            comment_cursor = ""
+            if subtweet == False:
+                print(f"\n{Fore.MAGENTA}Attempting to fetch comments...{Fore.WHITE}")
+            else:
+                print(f"\n{Fore.MAGENTA}Attempting to fetch comments for subtweet id: {Fore.YELLOW}{current_id}{Fore.MAGENTA}...{Fore.WHITE}")
+            while comment_cursor != None:
+                if comment_cursor == "":
+                    comment_cursor = None
             
-            try:
-                comments = await tweet.get_comments(cursor=comment_cursor)
-                comment_cursor = comments.cursor
-            except Exception as e:
-                print(f"{Fore.RED}Attempt to Fetch comments failed for the following Reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                if "Rate limit exceeded" in str(e):
-                    exit()
-                continue
-            if len(comments) == 0:
-                comment_cursor = None
-                continue
-            for comment in comments:
-                for tweetComment in comment.tweets:
-                    try:
-                        tweet_comment_data = await modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name, app=app)
-                        if tweet_comment_data != None:
-                            data_tweet["comments"].append(tweet_comment_data)
-                    except Exception as e:
-                        print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                        if "Rate limit exceeded" in str(e):
-                            exit()
+                try:
+                    comments = await tweet.get_comments(cursor=comment_cursor)
+                    comment_cursor = comments.cursor
+                except Exception as e:
+                    print(f"{Fore.RED}Attempt to Fetch comments failed for the following Reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if "Rate limit exceeded" in str(e):
+                        exit()
+                    continue
+                if len(comments) == 0:
+                    comment_cursor = None
+                    continue
+                for comment in comments:
+                    for tweetComment in comment.tweets:
+                        try:
+                            tweet_comment_data = await modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name, app=app)
+                            if tweet_comment_data != None:
+                                data_tweet["comments"].append(tweet_comment_data)
+                        except Exception as e:
+                            print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                            if "Rate limit exceeded" in str(e):
+                                exit()
             
         
     
