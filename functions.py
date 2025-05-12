@@ -81,7 +81,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "poll_data": {},
         "tweet_raw": tweet.text,
         "tweet_parsed": "",
-        "comments": []
+        "comments": [],
+        "retweet_users": []
     }
 
     # Fetch Urls and convert them to original urls
@@ -159,6 +160,27 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             for quote in quotes:
                 tweetquotes = await modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app) 
                 data_tweet["tweets_quoting"].append(tweetquotes)
+
+    # Checks if tweet has any retweets and tries to download the user list
+    if tweet.retweet_counts > 0:
+            retweets_cursor = ""
+            while retweets_cursor != None:
+                if retweets_cursor == "":
+                    retweets_cursor = None
+
+                try:
+                    retweets = await app.get_tweet_retweets(tweet, cursor=retweets_cursor)
+                    retweets_cursor = retweets.cursor
+                except Exception as e:
+                    print(f"{Fore.RED}Failed to Fetch Retweet User List of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if "Rate limit exceeded" in str(e):
+                        exit()
+                if len(retweets) == 0:
+                    retweets_cursor = None
+                    continue
+                for retweet in retweets:
+                    tweetretweets = await modify_tweet(retweet, True, parent_id=parent_id, path_name=path_name, app=app) 
+                    data_tweet["retweet_users"].append(tweetretweets)
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
     if tweet.is_reply == True and subtweet == False:
