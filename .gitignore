@@ -3,3 +3,4 @@ manual.txt
 /scraped
 /v1
 /__pycache__
+.env

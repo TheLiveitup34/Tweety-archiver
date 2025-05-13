@@ -17,15 +17,84 @@ async def main():
     base_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
     path_name = os.path.dirname(os.path.realpath(__file__)) + os.sep + "scraped"
 
+
+
     # Checks if base path is made and set
     if not os.path.exists(path_name):
         os.makedirs(path_name)
-
+    login_type = False
     app = TwitterAsync("session")
+    # check if there is a .env file and if not create one
+    if not os.path.exists(path_name + os.sep + "session.tw_session"):
+        if not os.path.exists(base_path + ".env"):
+            print(f"{Fore.RED}No .env file detected, please update your credentials either Auth_Token or Credentials in the .env file{Fore.WHITE}")
+            # make a .env file with the following format
+            # TWITTER_USERNAME=your_username
+            # TWITTER_PASSWORD=your_password
+            f = open(base_path + ".env", "w")
+            f.write("TWITTER_USERNAME=your_username\n")
+            f.write("TWITTER_PASSWORD=your_password\n")
+            f.write("TWITTER_AUTH_TOKEN=your_auth_token\n")
+            
+            f.close()
+            exit()
+        else:
+            # check if the .env file is empty
+            f = open(base_path + ".env", "r")
+            lines = f.readlines()
+            f.close()
+            if len(lines) == 0:
+                print(f"{Fore.RED}No credentials found in .env file, please update your credentials in the .env file{Fore.WHITE}")
+                exit()
+            else:
+                # check if the .env file has the correct format
+                if len(lines) != 3:
+                    print(f"{Fore.RED}Invalid .env file format, please update your credentials in the .env file{Fore.WHITE}")
+                    exit()
+                else:
+                    # check if the .env file has the correct keys
+                    if lines[0].split("=")[0] != "TWITTER_USERNAME" or lines[1].split("=")[0] != "TWITTER_PASSWORD" or lines[2].split("=")[0] != "TWITTER_AUTH_TOKEN":
+                        print(f"{Fore.RED}Invalid .env file format, please update your credentials in the .env file{Fore.WHITE}")
+                        exit()
+                    else:
+                        username = lines[0].split("=")[1].strip()
+                        password = lines[1].split("=")[1].strip()
+                        auth_token = lines[2].split("=")[1].strip()
+
+                        # check if the .env file has the correct values
+                        if username == "your_username" and password == "your_password" and auth_token == "your_auth_token":
+                            print(f"{Fore.RED}Default .env file detected please update your credentials...{Fore.WHITE}")
+                            exit()
+                        else:
+                            if username != "your_username" and password != "your_password" and auth_token == "your_auth_token":
+                                login_type = True
+                                print(f"{Fore.YELLOW}Detected Credentials, Attempting to login...{Fore.WHITE}")
+                            elif username == "your_username" and password == "your_password" and auth_token != "your_auth_token":
+                                print(f"{Fore.YELLOW}Detected Auth Token, Attempting to login...{Fore.WHITE}")
+                            elif username != "your_username" and password != "your_password" and auth_token != "your_auth_token":
+                                print(f"{Fore.YELLOW}Detected Credentials and Auth Token, Attempting to login...{Fore.WHITE}")
+                                login_type = True
+                            else:
+                                print(f"{Fore.RED}Invalid .env file format, please update your credentials in the .env file{Fore.WHITE}")
+                                exit()
+                
+   
     # Start calling to allow you to login Dynamicly Session is saved
-    app.start("", "")
-
-
+    
+        if login_type == True:
+            try:
+                await app.sign_in(username, password)
+            except Exception as e:
+                if "actionrequired" in str(e).lower() or "check your email" in str(e).lower():
+                    action = input(f"Action Required {str(e.message)} : ")
+                    await app.sign_in(username, password, extra=action)
+                if "Rate limit exceeded" in str(e):
+                    exit()
+        else:
+            await app.load_auth_token(auth_token)
+    else:
+        print(f"{Fore.YELLOW}Detected Session, Attempting to login...{Fore.WHITE}")
+        await app.connect()
     # Start of username validation Loop
     username_valid = False
     user = ""
