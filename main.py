@@ -85,8 +85,9 @@ async def main():
             try:
                 await app.sign_in(username, password)
             except Exception as e:
-                if "actionrequired" in str(e).lower() or "check your email" in str(e).lower():
-                    action = input(f"Action Required {str(e.message)} : ")
+                print(f"{Fore.RED}Failed to login for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if "actionrequired" in str(e).lower() or "check your email" in str(e).lower() or "enter your" in str(e).lower():
+                    action = input(f"{Fore.RED}Action Required:{Fore.YELLOW} {str(e.message)}: ")
                     await app.sign_in(username, password, extra=action)
                 if "Rate limit exceeded" in str(e):
                     exit()
