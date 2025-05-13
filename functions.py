@@ -4,7 +4,6 @@ import time
 import requests
 import shutil
 import os
-import asyncio
 from colorama import Fore
 from configs import configurations
 
@@ -106,14 +105,17 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
         # Tries and catches dead urls returning resolved url
         try:
-            res = requests.get(url, timeout=5)
+            if url.startswith("http://"):
+                url = url.replace("http://", "https://")
+            res = requests.get(url, allow_redirects=False, timeout=5)
+            actual_url = res.next.url
         except Exception as e:
             error = str(e)
-            actual_url = re.findall("host='(.*?)'", error)[0]
-            print(f"{Fore.YELLOW}Failed to reach domain. {actual_url}{Fore.WHITE}")
+            print(f"{Fore.RED}Failed to reach domain. Error: {error}")
+            
+        if actual_url == None:
+            continue
         
-        if res != None:
-            actual_url = res.url
         data_tweet["href_links"].append(actual_url)
         tweet.text = tweet.text.replace(url, actual_url)
         print(f" - {Fore.BLUE}Fetched {Fore.YELLOW}{url} {Fore.BLUE}and found {Fore.YELLOW}{actual_url}\n{Fore.BLUE} - Replacing {Fore.YELLOW}{url}{Fore.BLUE} with found {Fore.YELLOW}{actual_url}{Fore.WHITE}")
