@@ -25,7 +25,10 @@ async def modify_download(file_name, file_size,downloaded_in_bites):
 
 # This funciton modifies the tweet and fetches new tweets recursivly
 async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_id_data=[], app=None):
-
+    if "author" not in tweet.__dict__:
+        # print
+        print(f"{Fore.RED}Failed to Parse Tweet due to the following reason: {Fore.YELLOW}Tweet is a User Object{Fore.WHITE}")
+        exit()
     cfg = await configurations()  
     if len(parsed_id_data) > 0:
         for parsed_id in parsed_id_data:
@@ -185,14 +188,13 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     retweets_cursor = None
                     continue
                 for retweet in retweets:
-                    tweetretweets = await modify_tweet(retweet, True, parent_id=parent_id, path_name=path_name, app=app) 
-                    data_tweet["retweet_users"].append(tweetretweets)
+                    data_tweet["retweet_users"].append(f"{retweet.username}:{retweet.name}")
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
     if tweet.is_reply == True and subtweet == False:
         print(f"{Fore.MAGENTA}Reply to Tweet Detected and fetching...")
         try:
-            replied_to = tweet.get_reply_to()
+            replied_to = await tweet.get_reply_to()
             data_tweet["replied_to_tweet"] = await modify_tweet(replied_to, True, parent_id=parent_id,path_name=path_name, app=app)
             data_tweet["replied_to_id"] = replied_to.id
         except Exception as e:
