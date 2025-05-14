@@ -188,7 +188,14 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     retweets_cursor = None
                     continue
                 for retweet in retweets:
-                    data_tweet["retweet_users"].append(f"{retweet.username}:{retweet.name}")
+                    data_tweet["retweet_users"].append({
+                        "username": retweet.username,
+                        "display": retweet.name,
+                        "verified": retweet.verified,
+                        "protected": retweet.protected,
+                        "parody": retweet.is_parody_account
+                        "automated": retweet.is_automated
+                    })
 
     # Checks if tweet is a reply and tries to download the tweet it replied to
     if tweet.is_reply == True and subtweet == False:
