@@ -193,7 +193,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "display": retweet.name,
                         "verified": retweet.verified,
                         "protected": retweet.protected,
-                        "parody": retweet.is_parody_account
+                        "parody": retweet.is_parody_account,
                         "automated": retweet.is_automated
                     })
 
