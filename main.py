@@ -61,6 +61,10 @@ async def main():
                         password = lines[1].split("=")[1].strip()
                         auth_token = lines[2].split("=")[1].strip()
 
+                        # check if username and password and or auth_token is empty
+                        if username == "" or password == "" or auth_token == "":
+                            print(f"{Fore.RED}No credentials found in .env file, please update your credentials in the .env file{Fore.WHITE}")
+                            exit()
                         # check if the .env file has the correct values
                         if username == "your_username" and password == "your_password" and auth_token == "your_auth_token":
                             print(f"{Fore.RED}Default .env file detected please update your credentials...{Fore.WHITE}")
