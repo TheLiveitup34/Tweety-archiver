@@ -41,7 +41,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         parent_id = tweet.id
     # Paresed ID checker
     if f"{tweet.id}:{tweet.author.username}" in parsed_ids:
-        print(f"{Fore.BLUE}Found Already Parsed ID: {Fore.YELLOW}{tweet.id} {Fore.BLUE}Skiping..{Fore.WHITE}")
+        print(f"{Fore.BLUE}Found Already Parsed ID: {Fore.YELLOW}{tweet.id} {Fore.BLUE}Skipping..{Fore.WHITE}")
         return None
     
     # Establishing a path for the media to be stored
