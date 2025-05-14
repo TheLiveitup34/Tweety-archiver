@@ -83,6 +83,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "media_files": [],
         "tweets_quoting": [],
         "poll_data": {},
+        "article_title": tweet.article.title,
         "tweet_raw": tweet.text,
         "tweet_parsed": "",
         "comments": [],
