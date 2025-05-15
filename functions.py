@@ -209,6 +209,12 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 "url": media.url,
                 "alt_text": media.alt_text,
                 "file_name": file_name
+                "source_user": []
+                })
+                data_tweet["media"][-1]["source_user"].append({
+                "username": media.source_user.username,
+                "display": media.source_user.name,
+                "verified": media.source_user.verified
                 })
             
     # Checks if tweet is Quoting another tweet and tries to download the tweet it quoted
