@@ -5,7 +5,7 @@ It includes the following settings:
 ============================
 
     MAN CONFIGURATION
-- GrabArticles: Whether to grab articles on twitter. (Note if you have GrabMediate Disabled, this will still download media for articles)
+- GrabArticles: Whether to grab articles on twitter. (Note if you have GrabMedia Disabled, this will still download media for articles)
 - ConvertLinks: Whether to convert links in tweets from the twitter url shortner to its main link.
 - GrabMedia: Whether to grab media from tweets.(images, videos, gifs) Not the related to articles.
 - GrabTweetQuoted: Whether to grab the tweet it quoted.
@@ -29,5 +29,6 @@ async def configurations():
         "GrabRetweetedBy": True,
         "GrabRepliedToTweet": False,
         "GrabReplies": False,
+        "GrabHiddenReplies": False,
         "GrabQuoteRetweets": False,
     }
