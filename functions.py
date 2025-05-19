@@ -345,7 +345,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     comment_cursor = None
             
                 try:
-                    comments = await tweet.get_comments(cursor=comment_cursor)
+                    if cfg["GrabHiddenReplies"] == True: 
+                        comments = await tweet.get_comments(cursor=comment_cursor, get_hidden=True) #Note for Liv, if possible, can we put hidden replies in it's own section?
+                    else:
+                        comments = await tweet.get_comments(cursor=comment_cursor)
                     comment_cursor = comments.cursor
                 except Exception as e:
                     print(f"{Fore.RED}Attempt to Fetch comments failed for the following Reason: {Fore.YELLOW}{e}{Fore.WHITE}")
