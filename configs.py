@@ -13,6 +13,7 @@ It includes the following settings:
 - GrabRetweetedBy: Whether to grab the users that retweeted the tweet.
 - GrabRepliedToTweet: Whether to grab the tweet it replied to.
 - GrabReplies: Whether to grab replies from tweets.
+- GrabEditHistory: Whether to grab edit history from tweets.
 - GrabHiddenReplies: Whether to grab hidden replies from tweets.
 - GrabQuoteRetweets: Whether to grab quote retweets from tweets.
 
@@ -30,6 +31,7 @@ async def configurations():
         "GrabRetweetedBy": True,
         "GrabRepliedToTweet": False,
         "GrabReplies": False,
+        "GrabEditHistory": False,
         "GrabHiddenReplies": False,
         "GrabQuoteRetweets": False,
     }

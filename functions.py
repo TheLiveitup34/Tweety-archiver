@@ -369,7 +369,18 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             if "Rate limit exceeded" in str(e):
                                 exit()
             
-        
+    if cfg["GrabEditHistory"] == True:   
+        data_tweet["edit_history"] = [] #Add check here if possible
+        edits = await app.tweet_edit_history(tweet.id)
+        for edit in edits:
+            try:
+                edithistory = await modify_tweet(edit, True, parent_id=parent_id, path_name=path_name, app=app)
+                if edithistory != None:
+                    data_tweet["edit_history"].append(edithistory)
+            except Exception as e:
+                            print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                            if "Rate limit exceeded" in str(e):
+                                exit()        
     
     if subtweet == False:
         # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
