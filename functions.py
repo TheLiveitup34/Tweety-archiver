@@ -132,31 +132,31 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             if len(tweet.article.media) > 0:
                 print(f"{Fore.MAGENTA}Found Article Media...{Fore.WHITE}")
                 data_tweet["article"]["media"] = []
-                data_tweet["article"]["media_files"] = []
                 for media in tweet.article.media:
                     data_url = None
+                    if "url" in media.__dict__:
+                        data_url = media.url
+                    else:
+                        best_stream = await media.best_stream()
+                        data_url = best_stream.url
+                    file_name = await download_media(data_url, modify_download)
+                    shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
+                    os.remove(base_path + file_name)
                     if "url" in media.__dict__:
                         data_tweet["article"]["media"].append({
                             "url": media.url,
                             "alt_text": media.alt_text,
                             "width": media.width,
-                            "height": media.height
+                            "height": media.height,
+                            "file_name": file_name
                         })
-                        data_url = media.url
                     else:
-                        best_stream = await media.best_stream()
-                        data_url = best_stream.url
                         data_tweet["article"]["media"].append({
                             "url": best_stream.url,
                             "content_type": best_stream.content_type.lower(),
-                            "alt_text": media.alt_text
+                            "alt_text": media.alt_text,
+                            "file_name": file_name
                         })
-                    file_name = await download_media(data_url, modify_download)
-                    shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
-                    os.remove(base_path + file_name)
-                    data_tweet["article"]["media_files"].append(file_name)
-
-
 
     if cfg["ConvertLinks"] == True:
         data_tweet["href_links"] = []
@@ -197,15 +197,25 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         data_tweet["tweet_parsed"] = tweet.text
 
     if cfg["GrabMedia"] == True:
-        data_tweet["media_files"] = []
+        data_tweet["media"] = []
     # Checks if media is in tweet data and fetches it
         if len(tweet.media) > 0:
             print(f"\n{Fore.MAGENTA}Found and Downloading All Media...{Fore.WHITE}")
             for media in tweet.media:
                 file_name = await media.download(None, modify_download)
-                data_tweet["media_files"].append(file_name)
                 shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
                 os.remove(base_path + file_name)
+                data_tweet["media"].append({
+                "url": media.url,
+                "alt_text": media.alt_text,
+                "file_name": file_name
+                "source_user": []
+                })
+                data_tweet["media"][-1]["source_user"].append({
+                "username": media.source_user.username,
+                "display": media.source_user.name,
+                "verified": media.source_user.verified
+                })
             
     # Checks if tweet is Quoting another tweet and tries to download the tweet it quoted
     if cfg["GrabTweetQuoted"] == True:
