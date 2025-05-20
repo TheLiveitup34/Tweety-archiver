@@ -16,7 +16,7 @@ It includes the following settings:
 - GrabEditHistory: Whether to grab edit history from tweets.
 - GrabHiddenReplies: Whether to grab hidden replies from tweets (Requires GrabReplies to be True).
 - GrabQuoteRetweets: Whether to grab quote retweets from tweets.
-- GrabProposedNotes: Whether to grab proposed notes from tweets.
+- GrabProposedNotes: Whether to grab proposed community notes from tweets.
 - GrabSpamReplies: Whether to grab spam replies from tweets (Requires GrabReplies to be True).
 - GrabBroadcasts: Whether to grab broadcasts from tweets.
 - GrabAudioSpace: Whether to grab audio space from tweets.
