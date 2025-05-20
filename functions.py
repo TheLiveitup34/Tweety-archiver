@@ -405,8 +405,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                                 exit()
             
     if cfg["GrabEditHistory"] == True:   
-        if tweet.edit_history != None:
-            if len(tweet.edit_history.tweet_ids) > 1:
+        if tweet.edit_control != None:
+            if len(tweet.edit_control.tweet_ids) > 1:
                 data_tweet["edit_history"] = [] 
                 edits = await app.tweet_edit_history(tweet.id)
                 for edit in edits:
