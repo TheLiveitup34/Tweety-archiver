@@ -12,6 +12,9 @@ from tweety import TwitterAsync
 import asyncio
 from tweety.filters import SearchFilters
 from colorama import Fore
+
+DEBUG_LOGGING = False
+
 async def main():
     # Defines Paths for the app to use for path traversial
     base_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
@@ -195,7 +198,7 @@ async def main():
                     continue
                 try:
                     temp2 = await app.tweet_detail(manual)
-                    temp = await modify_tweet(temp2, path_name=path_name, parsed_id_data=parsed_id_data, app=app)
+                    temp = await modify_tweet(temp2, path_name=path_name, parsed_id_data=parsed_id_data, app=app, debug=DEBUG_LOGGING)
                     if temp != None:
                         for ids in temp:
                             if ids not in parsed_id_data:
@@ -240,7 +243,7 @@ async def main():
             # Loops through tweets and tries to modify them
             for tweet in tweets:
                 try:
-                    temp = await modify_tweet(tweet, path_name=path_name, parsed_id_data=parsed_id_data, app=app)
+                    temp = await modify_tweet(tweet, path_name=path_name, parsed_id_data=parsed_id_data, app=app, debug=DEBUG_LOGGING)
                     if temp != None:
                         for ids in temp:
                             if ids not in parsed_id_data:
@@ -251,6 +254,12 @@ async def main():
                         f.close()
                 except Exception as e:
                     print(f"{Fore.RED}Failed to Modify searched Tweet id:{Fore.YELLOW}{tweet.id}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if DEBUG_LOGGING:
+                        # loop through the traceback and print all the lines
+                        print(f"{Fore.RED}Traceback:{Fore.white}")
+                        for line in e.__traceback__.tb_frame.f_back:
+                            print(f"{Fore.YELLOW}{line}")
+                            
                     if "Rate limit exceeded" in str(e):
                         exit()
             

@@ -44,7 +44,7 @@ async def download_media(media_url, modify_download):
 
 
 # This funciton modifies the tweet and fetches new tweets recursivly
-async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_id_data=[], app=None):
+async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, parsed_id_data=[], app=None, debug=False):
     if "author" not in tweet.__dict__:
         # print
         print(f"{Fore.RED}Failed to Parse Tweet due to the following reason: {Fore.YELLOW}Tweet is a User Object{Fore.WHITE}")
@@ -187,7 +187,11 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             except Exception as e:
                 error = str(e)
                 print(f"{Fore.RED}Failed to reach domain. Error: {error}")
-                
+                if debug:
+                    # loop through the traceback and print all the lines
+                    print(f"{Fore.RED}Traceback:{Fore.white}")
+                    for line in e.__traceback__.tb_frame.f_back:
+                        print(f"{Fore.YELLOW}{line}")
             if actual_url == None:
                 continue
         
@@ -206,16 +210,17 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
                 os.remove(base_path + file_name)
                 data_tweet["media"].append({
-                "url": media.url,
-                "alt_text": media.alt_text,
-                "file_name": file_name
-                "source_user": []
+                    "url": media.url,
+                    "alt_text": media.alt_text,
+                    "file_name": file_name,
+                    "source_user": []
                 })
-                data_tweet["media"][-1]["source_user"].append({
-                "username": media.source_user.username,
-                "display": media.source_user.name,
-                "verified": media.source_user.verified
-                })
+                if "source_user" in media.__dict__ and media.source_user != None:
+                    data_tweet["media"][-1]["source_user"].append({
+                        "username": media.source_user.username,
+                        "display": media.source_user.name,
+                        "verified": media.source_user.verified
+                    })
             
     # Checks if tweet is Quoting another tweet and tries to download the tweet it quoted
     if cfg["GrabTweetQuoted"] == True:
@@ -224,10 +229,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             if tweet.quoted_tweet != None:
                 print(f"{Fore.MAGENTA}Quoted Tweet Detected and fetching...")
                 try:
-                    data_tweet["quoted_tweet"] = await modify_tweet(tweet.quoted_tweet, True, parent_id=parent_id, path_name=path_name, app=app)
+                    data_tweet["quoted_tweet"] = await modify_tweet(tweet.quoted_tweet, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
                     data_tweet["quoted_tweet_id"] = tweet.quoted_tweet.id
                 except Exception as e:
                     print(f"{Fore.RED}Failed to Modify Quoted Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if debug:
+                        # loop through the traceback and print all the lines
+                        print(f"{Fore.RED}Traceback:{Fore.white}")
+                        for line in e.__traceback__.tb_frame.f_back:
+                            print(f"{Fore.YELLOW}{line}")
                     if "Rate limit exceeded" in str(e):
                         exit()
             else:
@@ -250,13 +260,18 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     quoted_cursor = quotes.cursor
                 except Exception as e:
                     print(f"{Fore.RED}Failed to Fetch Quoted Tweets of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if debug:
+                        # loop through the traceback and print all the lines
+                        print(f"{Fore.RED}Traceback:{Fore.white}")
+                        for line in e.__traceback__.tb_frame.f_back:
+                            print(f"{Fore.YELLOW}{line}")
                     if "Rate limit exceeded" in str(e):
                         exit()
                 if quotes == None:
                     quoted_cursor = None
                     continue
                 for quote in quotes:
-                    tweetquotes = await modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app) 
+                    tweetquotes = await modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug) 
                     data_tweet["tweets_quoting"].append(tweetquotes)
 
 
@@ -276,6 +291,11 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         retweets_cursor = retweets.cursor
                     except Exception as e:
                         print(f"{Fore.RED}Failed to Fetch Retweet User List of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                        if debug:
+                            # loop through the traceback and print all the lines
+                            print(f"{Fore.RED}Traceback:{Fore.white}")
+                            for line in e.__traceback__.tb_frame.f_back:
+                                print(f"{Fore.YELLOW}{line}")
                         if "Rate limit exceeded" in str(e):
                             exit()
                     if len(retweets) == 0:
@@ -298,10 +318,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             print(f"{Fore.MAGENTA}Reply to Tweet Detected and fetching...")
             try:
                 replied_to = await tweet.get_reply_to()
-                data_tweet["replied_to_tweet"] = await modify_tweet(replied_to, True, parent_id=parent_id,path_name=path_name, app=app)
+                data_tweet["replied_to_tweet"] = await modify_tweet(replied_to, True, parent_id=parent_id,path_name=path_name, app=app, debug=debug)
                 data_tweet["replied_to_id"] = replied_to.id
             except Exception as e:
                 print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if debug:
+                    # loop through the traceback and print all the lines
+                        print(f"{Fore.RED}Traceback:{Fore.white}")
+                        for line in e.__traceback__.tb_frame.f_back:
+                            print(f"{Fore.YELLOW}{line}")
                 if "Rate limit exceeded" in str(e):
                     exit()
 
@@ -352,6 +377,11 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     comment_cursor = comments.cursor
                 except Exception as e:
                     print(f"{Fore.RED}Attempt to Fetch comments failed for the following Reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if debug:
+                        # loop through the traceback and print all the lines
+                        print(f"{Fore.RED}Traceback:{Fore.white}")
+                        for line in e.__traceback__.tb_frame.f_back:
+                            print(f"{Fore.YELLOW}{line}")
                     if "Rate limit exceeded" in str(e):
                         exit()
                     continue
@@ -361,11 +391,16 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 for comment in comments:
                     for tweetComment in comment.tweets:
                         try:
-                            tweet_comment_data = await modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name, app=app)
+                            tweet_comment_data = await modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
                             if tweet_comment_data != None:
                                 data_tweet["comments"].append(tweet_comment_data)
                         except Exception as e:
                             print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                            if debug:
+                                # loop through the traceback and print all the lines
+                                print(f"{Fore.RED}Traceback:{Fore.white}")
+                                for line in e.__traceback__.tb_frame.f_back:
+                                    print(f"{Fore.YELLOW}{line}")
                             if "Rate limit exceeded" in str(e):
                                 exit()
             
@@ -374,13 +409,18 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         edits = await app.tweet_edit_history(tweet.id)
         for edit in edits:
             try:
-                edithistory = await modify_tweet(edit, True, parent_id=parent_id, path_name=path_name, app=app)
+                edithistory = await modify_tweet(edit, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
                 if edithistory != None:
                     data_tweet["edit_history"].append(edithistory)
             except Exception as e:
-                            print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                            if "Rate limit exceeded" in str(e):
-                                exit()        
+                print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if debug:
+                    # loop through the traceback and print all the lines
+                    print(f"{Fore.RED}Traceback:{Fore.white}")
+                    for line in e.__traceback__.tb_frame.f_back:
+                        print(f"{Fore.YELLOW}{line}")
+                if "Rate limit exceeded" in str(e):
+                    exit()        
     
     if subtweet == False:
         # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
