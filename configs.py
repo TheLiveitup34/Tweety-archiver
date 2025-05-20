@@ -14,8 +14,13 @@ It includes the following settings:
 - GrabRepliedToTweet: Whether to grab the tweet it replied to.
 - GrabReplies: Whether to grab replies from tweets.
 - GrabEditHistory: Whether to grab edit history from tweets.
-- GrabHiddenReplies: Whether to grab hidden replies from tweets.
+- GrabHiddenReplies: Whether to grab hidden replies from tweets (Requires GrabReplies to be True).
 - GrabQuoteRetweets: Whether to grab quote retweets from tweets.
+- GrabProposedNotes: Whether to grab proposed notes from tweets.
+- GrabSpamReplies: Whether to grab spam replies from tweets (Requires GrabReplies to be True).
+- GrabBroadcasts: Whether to grab broadcasts from tweets.
+- GrabAudioSpace: Whether to grab audio space from tweets.
+- GrabLists: Whether to grab list data from tweets.
 
 ============================
 This module is used to configure the bot's behavior and settings.
@@ -31,7 +36,12 @@ async def configurations():
         "GrabRetweetedBy": False,
         "GrabRepliedToTweet": False,
         "GrabReplies": False,
-        "GrabEditHistory": True,
+        "GrabEditHistory": False,
         "GrabHiddenReplies": False,
         "GrabQuoteRetweets": False,
+        "GrabProposedNotes": False,
+        "GrabSpamReplies": False,
+        "GrabBroadcasts": False,
+        "GrabAudioSpace": False,
+        "GrabLists": False
     }
