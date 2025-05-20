@@ -23,15 +23,15 @@ This module is used to configure the bot's behavior and settings.
 """
 async def configurations():
     return {
-        "GrabArticles": True,
-        "ConvertLinks": True,
-        "GrabMedia": True,
-        "GrabPolls": True,
+        "GrabArticles": False,
+        "ConvertLinks": False,
+        "GrabMedia": False,
+        "GrabPolls": False,
         "GrabTweetQuoted": False,
-        "GrabRetweetedBy": True,
+        "GrabRetweetedBy": False,
         "GrabRepliedToTweet": False,
         "GrabReplies": False,
-        "GrabEditHistory": False,
+        "GrabEditHistory": True,
         "GrabHiddenReplies": False,
         "GrabQuoteRetweets": False,
     }
