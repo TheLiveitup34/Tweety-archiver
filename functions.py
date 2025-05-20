@@ -405,22 +405,23 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                                 exit()
             
     if cfg["GrabEditHistory"] == True:   
-        data_tweet["edit_history"] = [] #Add check here if possible
-        edits = await app.tweet_edit_history(tweet.id)
-        for edit in edits:
-            try:
-                edithistory = await modify_tweet(edit, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
-                if edithistory != None:
-                    data_tweet["edit_history"].append(edithistory)
-            except Exception as e:
-                print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                if debug:
-                    # loop through the traceback and print all the lines
-                    print(f"{Fore.RED}Traceback:{Fore.white}")
-                    for line in e.__traceback__.tb_frame.f_back:
-                        print(f"{Fore.YELLOW}{line}")
-                if "Rate limit exceeded" in str(e):
-                    exit()        
+        if tweet.has_newer_version == True:
+            data_tweet["edit_history"] = [] #Add check here if possible
+            edits = await app.tweet_edit_history(tweet.id)
+            for edit in edits:
+                try:
+                    edithistory = await modify_tweet(edit, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
+                    if edithistory != None:
+                        data_tweet["edit_history"].append(edithistory)
+                except Exception as e:
+                    print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if debug:
+                        # loop through the traceback and print all the lines
+                        print(f"{Fore.RED}Traceback:{Fore.white}")
+                        for line in e.__traceback__.tb_frame.f_back:
+                            print(f"{Fore.YELLOW}{line}")
+                    if "Rate limit exceeded" in str(e):
+                        exit()        
     
     if subtweet == False:
         # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
