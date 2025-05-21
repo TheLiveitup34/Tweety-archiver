@@ -442,6 +442,22 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     print(f"{Fore.YELLOW}{line}")
             if "Rate limit exceeded" in str(e):
                 exit()
+
+    if cfg["GrabBroadcasts"] == True:
+        if tweet.broadcast != None:
+            data_tweet["broadcast"] = [] 
+            data_tweet["broadcast"].append({
+                "url": tweet.broadcast.url,
+                "id": tweet.broadcast.id,
+                "title": tweet.broadcast.title,
+                "state": tweet.broadcast.state,
+                "source": tweet.broadcast.source,
+                "username": tweet.broadcast.username,
+                "display name": tweet.broadcast.broadcaster_name,
+                "width": tweet.broadcast.width,
+                "height": tweet.broadcast.height
+            })
+# I would like to add stats, but that looks impossible currently   
     
     
     if subtweet == False:
