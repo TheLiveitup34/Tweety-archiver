@@ -19,7 +19,7 @@ It includes the following settings:
 - GrabProposedNotes: Whether to grab proposed community notes from tweets.
 - GrabSpamReplies: Whether to grab spam replies from tweets (Requires GrabReplies to be True).
 - GrabBroadcasts: Whether to grab broadcasts from tweets.
-- GrabAudioSpace: Whether to grab audio space from tweets.
+- GrabAudioSpace: Whether to grab audio space from tweets.(This may take a while as it downloads the audio in chunks due to the way twitter stores it)
 - GrabLists: Whether to grab list data from tweets.
 
 ============================

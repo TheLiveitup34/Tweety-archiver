@@ -39,6 +39,9 @@ Install the requirements.txt
 ##### **This project also requires python to be installed via [Pythons website](https://www.python.org/downloads/)**
 [https://www.python.org/downloads/](https://www.python.org/downloads/)
 
+##### **This project also requires FFmpeg to be installed via [FFmpeg](https://ffmpeg.org/download.html)**
+[https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+
 Note this was written in python version 3.10.12 and may not work in later versions depending if updates or tweety has a version break
 
 ```bash

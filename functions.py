@@ -6,6 +6,7 @@ import shutil
 import os
 from colorama import Fore
 from configs import configurations
+from aac_to_mp3_converter import convert_aac_to_mp3
 
 
 # Defines Paths for the app to use for path traversial
@@ -16,14 +17,32 @@ parsed_ids = []
 
 
 # This function does nothing but print a verbose information of the file being downloaded may have error displayed when running
-async def modify_download(file_name, file_size,downloaded_in_bites):
+async def modify_download(file_name, file_size,downloaded_in_bites, verbose=True):
+    # check if the file size is Mb or Kb for the display
+    file_size_type = "B"
+    file_size_type_display = file_size
+    downloaded_in_bites_display = downloaded_in_bites
+    if file_size > 1024:
+        file_size_type = "Kb"
+        file_size_type_display = file_size // 1024
+        downloaded_in_bites_display = downloaded_in_bites // 1024
+    elif file_size > 1024 * 1024:
+        file_size = file_size // (1024 * 1024)
+        file_size_type_display = "Mb"
+        downloaded_in_bites_display = downloaded_in_bites // (1024 * 1024)
+    elif file_size > 1024 * 1024 * 1024:
+        file_size = file_size // (1024 * 1024 * 1024)
+        file_size_type_display = "Gb"
+        downloaded_in_bites_display = downloaded_in_bites // (1024 * 1024 * 1024)
+
     if file_size == downloaded_in_bites:
-        print(f"{Fore.BLUE}Downloaded {Fore.YELLOW}{file_name} {Fore.MAGENTA}{file_size // 1024}{Fore.BLUE}Mb{Fore.BLUE} Successfully...{Fore.WHITE}\n")
+        print(f"{Fore.BLUE}Downloaded {Fore.YELLOW}{file_name} {Fore.MAGENTA}{file_size_type_display}{Fore.BLUE}{file_size_type}{Fore.BLUE} Successfully...{Fore.WHITE}\n")
     else:
-        print(f"{Fore.BLUE}Downloading file {Fore.YELLOW}{file_name}  {Fore.MAGENTA}{downloaded_in_bites // 1024}{Fore.BLUE}Mb/{Fore.MAGENTA}{file_size//1024}{Fore.BLUE}Mb{Fore.WHITE}")
+        if verbose == True:
+            print(f"{Fore.BLUE}Downloading file {Fore.YELLOW}{file_name}  {Fore.MAGENTA}{downloaded_in_bites_display}{Fore.BLUE}{file_size_type}/{Fore.MAGENTA}{file_size_type_display}{Fore.BLUE}{file_size_type}{Fore.WHITE}")
     return None
 
-async def download_media(media_url, modify_download):
+async def download_media(media_url, modify_download, verbose=True):
     # download in the current directory
     file_name = os.path.basename(media_url)
     file_name = os.path.join(os.getcwd(), file_name)
@@ -36,7 +55,7 @@ async def download_media(media_url, modify_download):
             for data in response.iter_content(chunk_size=1024):
                 file.write(data)
                 downloaded_in_bites += len(data)
-                await modify_download(os.path.basename(file_name), file_size, downloaded_in_bites)
+                await modify_download(os.path.basename(file_name), file_size, downloaded_in_bites, verbose)
     except Exception as e:
         print(f"{Fore.RED}Failed to download {Fore.YELLOW}{media_url} {Fore.RED}to {Fore.YELLOW}{file_name} {Fore.RED}due to {Fore.MAGENTA}{e}{Fore.WHITE}")
         return None
@@ -425,23 +444,135 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             exit()
     
     if cfg["GrabAudioSpace"] == True:
-        # add check here
-        data_tweet["audio_space"] = []
-        try:
-            audiosound = await app.get_audio_space(tweet.audio_space_id)
+
+        if tweet.audio_space_id != None:
+            audiosound = None
+            data_tweet["audio_space"] = []
+            audiosound_download = False
+
+            try:
+                audiosound = await app.get_audio_space(tweet.audio_space_id)
+                audio_url = await audiosound.get_stream_link()
+                transcript_url = audio_url["source"]["location"]
+                # get everything before the last /
+                chunk_url = transcript_url.replace(transcript_url.split("/")[-1], "")
+
+                # fetch data from the transcript url
+                transcript = requests.get(transcript_url)
+                # get the text from the transcript
+                transcript_text = transcript.text
+                # find all the chunck_*_a.aac files in the text
+                chunk_files = re.findall("chunk_(.*)_a\.aac", transcript_text)
+                # add chunc_ and _a.aac to the files
+                chunk_files = [f"chunk_{file}_a.aac" for file in chunk_files]
+
+
+                # check if a chucks_download folder exists
+                if not os.path.exists(path_name + "media" + os.sep + current_id + os.sep + "chunks_download"):
+                    os.makedirs(path_name + "media" + os.sep + current_id + os.sep + "chunks_download")
+
+                # start downloading the chunks
+                chunk_number = 1
+                chunk_length = len(chunk_files)
+                for chunk_file in chunk_files:
+                    # clear the screen for a clean look
+                    print(f"\033[H\033[J")
+                    chunk_url_temp = f"{chunk_url}{chunk_file}"
+                    print(f"{Fore.MAGENTA}Downloading Chunk {Fore.YELLOW}{chunk_number} of {chunk_length}  {Fore.MAGENTA}Chunks from {Fore.YELLOW}Transcript{Fore.WHITE}")
+                    # print a progress bar like [============] 100%
+                    progress_bar = "[" + "=" * (chunk_number * 20 // chunk_length) + ">" + " " * (20 - (chunk_number * 20 // chunk_length)) + "]"
+                    percentage = "{:.2f}".format((chunk_number / chunk_length) * 100)
+                    print(f"{Fore.BLUE}{progress_bar} {Fore.YELLOW}{percentage}{Fore.BLUE}% {Fore.WHITE}")
+                    # check if the file already exists
+                    if os.path.exists(path_name + "media" + os.sep + current_id + os.sep + "chunks_download" + os.sep + chunk_file):
+                        chunk_number += 1
+                        time.sleep(0.0005)
+                        continue
+                    file_name = await download_media(chunk_url_temp, modify_download, verbose=False)
+                    shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + "chunks_download" + os.sep + file_name)
+                    os.remove(base_path + file_name)
+                    chunk_number += 1
+
+                chunk_files = [f"{path_name}media{os.sep}{current_id}{os.sep}chunks_download{os.sep}{file}" for file in chunk_files]
+
+                # convert the chunks to mp3
+                print(f"{Fore.MAGENTA}Converting {Fore.YELLOW}{len(chunk_files)} {Fore.MAGENTA}chunks to mp3...{Fore.WHITE}")
+                convert_success = convert_aac_to_mp3(
+                    file_list=chunk_files,
+                    output_file=f"{path_name}media{os.sep}{current_id}{os.sep}{audiosound.id}.mp3",
+                    verbose=True
+                )
+                audiosound_download = True
+                if convert_success == False:
+                    print(f"{Fore.RED}Failed to convert audio chunks to mp3{Fore.WHITE}")
+                else:
+                    print(f"{Fore.MAGENTA}Converted {Fore.YELLOW}{len(chunk_files)} {Fore.MAGENTA}chunks to mp3...{Fore.WHITE}")
+                    # delete the chunks
+                    for chunk_file in chunk_files:
+                        os.remove(chunk_file)
+                    # delete the chunks_download folder
+                    shutil.rmtree(path_name + "media" + os.sep + current_id + os.sep + "chunks_download")
+                del chunk_files
+                del chunk_url
+                del chunk_url_temp
+                del transcript
+                del transcript_text
+
+                print(f"{Fore.MAGENTA}Cleaned up chunck donloads and grabing data.{Fore.WHITE}")
+            except Exception as e:
+                print(f"{Fore.RED}Failed to Scrape Audio Spaces for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if debug:
+                    # loop through the traceback and print all the lines
+                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                    for line in e.__traceback__.tb_frame.f_back:
+                        print(f"{Fore.YELLOW}{line}")
+                if "Rate limit exceeded" in str(e):
+                    exit()
             if audiosound != None:
-                for audio in audiosound:
-                    data_tweet["audio_space"].append({
-                    }) #I wasn't sure of the data to put here, tried audio.id and audio.AudioSpace.id. w/o proper docs, I couldn't get this to work.
-        except Exception as e:
-            print(f"{Fore.RED}Failed to Scrape Audio Spaces for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-            if debug:
-                # loop through the traceback and print all the lines
-                print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                for line in e.__traceback__.tb_frame.f_back:
-                    print(f"{Fore.YELLOW}{line}")
-            if "Rate limit exceeded" in str(e):
-                exit()
+                if audiosound_download == False:
+                    print(f"{Fore.RED}WARNING: {Fore.CYAN}Audio Space may not be available this may be the reason for the error.. check the original audio space if this is the case.{Fore.WHITE}")
+                data_tweet["audio_space"].append({
+                    "id": audiosound.id,
+                    "title": audiosound.title,
+                    "state": audiosound.state,
+                    "created_at": str(audiosound.created_at),
+                    "started_at": str(audiosound.started_at),
+                    "ended_at": str(audiosound.ended_at),
+                    "updated_at": str(audiosound.updated_at),
+                    "total_live_listeners": int(audiosound.total_live_listeners),
+                    "total_replay_watched": audiosound.total_replay_watched,
+                    "disallow_join": audiosound.disallow_join,
+                    "is_employee_only": audiosound.is_employee_only,
+                    "is_locked": audiosound.is_locked,
+                    "is_muted": audiosound.is_muted,
+                    "creator": {
+                        "username": audiosound.creator.username,
+                        "display": audiosound.creator.name,
+                        "verified": audiosound.creator.verified,
+                        "protected": audiosound.creator.protected,
+                        "parody": audiosound.creator.is_parody_account,
+                        "automated": audiosound.creator.is_automated
+                    },
+                    "admins": [],
+                    "speakers": [], 
+                })
+                if audiosound_download == True:
+                    data_tweet["audio_space"][-1]["file_name"] = f"{audiosound.id}.mp3"
+
+                for admin in audiosound.admins:
+                    data_tweet["audio_space"][-1]["admins"].append({
+                        "twitter_screen_name": admin.twitter_screen_name,
+                        "username": admin.username,
+                        "display": admin.name,
+                        "verified": admin.is_verified
+                    })
+                for speaker in audiosound.speakers:
+                    data_tweet["audio_space"][-1]["speakers"].append({
+                        "twitter_screen_name": speaker.twitter_screen_name,
+                        "username": speaker.username,
+                        "display": speaker.name,
+                        "verified": speaker.is_verified
+                    })
 
     if cfg["GrabBroadcasts"] == True:
         if tweet.broadcast != None:
@@ -457,9 +588,9 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 "width": tweet.broadcast.width,
                 "height": tweet.broadcast.height
             })
-# I would like to add stats, but that looks impossible currently   
-    
-    
+    # I would like to add stats, but that looks impossible currently   
+
+
     if subtweet == False:
         # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
         f = open(path_name + "media" + os.sep + tweet.id + os.sep + tweet.id + ".json", "w")
@@ -505,3 +636,5 @@ async def confirm_data(msg =""):
             confirm = ""
             return False
     return True
+
+  
