@@ -549,9 +549,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "username": audiosound.creator.username,
                         "display": audiosound.creator.name,
                         "verified": audiosound.creator.verified,
-                        "protected": audiosound.creator.protected,
-                        "parody": audiosound.creator.is_parody_account,
-                        "automated": audiosound.creator.is_automated
+                        "protected": audiosound.creator.protected
                     },
                     "admins": [],
                     "speakers": [], 
@@ -565,6 +563,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "username": admin.username,
                         "display": admin.name,
                         "verified": admin.is_verified
+                        "protected": admin.protected
                     })
                 for speaker in audiosound.speakers:
                     data_tweet["audio_space"][-1]["speakers"].append({
@@ -572,6 +571,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "username": speaker.username,
                         "display": speaker.name,
                         "verified": speaker.is_verified
+                        "protected": speaker.protected
                     })
 
     if cfg["GrabBroadcasts"] == True:
