@@ -415,7 +415,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         if edithistory != None:
                             data_tweet["edit_history"].append(edithistory)
                     except Exception as e:
-                        print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                        print(f"{Fore.RED}Failed to Scrape Edit History for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                         if debug:
                             # loop through the traceback and print all the lines
                             print(f"{Fore.RED}Traceback:{Fore.WHITE}")
@@ -427,10 +427,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
     if cfg["GrabAudioSpace"] == True:
         # add check here
         data_tweet["audio_space"] = []
-        audioid = tweet.audio_space_id
         try:
-            audiosound = await app.get_audio_space(audioid)
-            print(audiosound)
+            audiosound = await app.get_audio_space(tweet.audio_space_id)
             if audiosound != None:
                 for audio in audiosound:
                     data_tweet["audio_space"].append({
