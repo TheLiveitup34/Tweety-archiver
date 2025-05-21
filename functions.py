@@ -562,7 +562,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "twitter_screen_name": admin.twitter_screen_name,
                         "username": admin.username,
                         "display": admin.name,
-                        "verified": admin.is_verified
+                        "verified": admin.is_verified,
                         "protected": admin.protected
                     })
                 for speaker in audiosound.speakers:
@@ -570,7 +570,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "twitter_screen_name": speaker.twitter_screen_name,
                         "username": speaker.username,
                         "display": speaker.name,
-                        "verified": speaker.is_verified
+                        "verified": speaker.is_verified,
                         "protected": speaker.protected
                     })
 
