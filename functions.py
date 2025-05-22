@@ -100,6 +100,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "verified": tweet.author.verified,
         "protected": tweet.author.protected,
         "parody": tweet.author.is_parody_account,
+        "commentary": tweet.author.is_commentary_account,
+        "fan": tweet.author.is_fan_account,
         "automated": tweet.author.is_automated,
         "language": tweet.language,
         "likes": tweet.likes,
@@ -110,6 +112,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "views": tweet.views,
         "tweet_source": tweet.source,
         "place": tweet.place,
+        "warning": tweet.warning,
         "has_newer_version": tweet.has_newer_version,
         "has_moderated_replies": tweet.has_moderated_replies,
         "is_sensitive": tweet.is_sensitive,
@@ -327,6 +330,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             "verified": retweet.verified,
                             "protected": retweet.protected,
                             "parody": retweet.is_parody_account,
+                            "commentary": retweet.author.is_commentary_account,
+                            "fan": retweet.author.is_fan_account,
                             "automated": retweet.is_automated
                         })
 
