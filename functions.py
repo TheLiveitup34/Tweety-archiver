@@ -113,6 +113,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "tweet_source": tweet.source,
         "place": tweet.place,
         "warning": tweet.warning,
+        "media_tags": tweet.media[0].tagged_users,
         "has_newer_version": tweet.has_newer_version,
         "has_moderated_replies": tweet.has_moderated_replies,
         "is_sensitive": tweet.is_sensitive,
