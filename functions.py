@@ -100,6 +100,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "verified": tweet.author.verified,
         "protected": tweet.author.protected,
         "parody": tweet.author.is_parody_account,
+        "commentary": tweet.author.is_commentary_account,
+        "fan": tweet.author.is_fan_account,
         "automated": tweet.author.is_automated,
         "language": tweet.language,
         "likes": tweet.likes,
@@ -110,6 +112,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "views": tweet.views,
         "tweet_source": tweet.source,
         "place": tweet.place,
+        "warning": tweet.warning,
+        "media_tags": tweet.media[0].tagged_users,
         "has_newer_version": tweet.has_newer_version,
         "has_moderated_replies": tweet.has_moderated_replies,
         "is_sensitive": tweet.is_sensitive,
@@ -327,6 +331,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             "verified": retweet.verified,
                             "protected": retweet.protected,
                             "parody": retweet.is_parody_account,
+                            "commentary": retweet.author.is_commentary_account,
+                            "fan": retweet.author.is_fan_account,
                             "automated": retweet.is_automated
                         })
 
@@ -549,9 +555,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "username": audiosound.creator.username,
                         "display": audiosound.creator.name,
                         "verified": audiosound.creator.verified,
-                        "protected": audiosound.creator.protected,
-                        "parody": audiosound.creator.is_parody_account,
-                        "automated": audiosound.creator.is_automated
+                        "protected": audiosound.creator.protected
                     },
                     "admins": [],
                     "speakers": [], 
@@ -564,14 +568,16 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "twitter_screen_name": admin.twitter_screen_name,
                         "username": admin.username,
                         "display": admin.name,
-                        "verified": admin.is_verified
+                        "verified": admin.is_verified,
+                        "protected": admin.protected
                     })
                 for speaker in audiosound.speakers:
                     data_tweet["audio_space"][-1]["speakers"].append({
                         "twitter_screen_name": speaker.twitter_screen_name,
                         "username": speaker.username,
                         "display": speaker.name,
-                        "verified": speaker.is_verified
+                        "verified": speaker.is_verified,
+                        "protected": speaker.protected
                     })
 
     if cfg["GrabBroadcasts"] == True:
