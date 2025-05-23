@@ -128,15 +128,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
     if len(tweet.media) > 0:
         data_tweet["media_tags"] = tweet.media[0].tagged_users
-        data_tweet["media_sensitive"] = []
-        for i in range(len(tweet.media)):
-            if "sensitive_media_warning" in tweet.media[i]._raw:
-                sensitive_media_warnings = tweet.media[i]._raw["sensitive_media_warning"].keys()
-                for warning in sensitive_media_warnings:
-                    data_tweet["media_sensitive"].append({
-                        "type": warning,
-                        "is_sensitive": tweet.media[i]._raw["sensitive_media_warning"][warning]
-                    })
+
     if "community" in tweet.__dict__:
         data_tweet["community"] = tweet.community
         data_tweet["community_role"] = tweet.author.community_role
@@ -253,6 +245,14 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     "file_name": file_name,
                     "source_user": []
                 })
+                if "sensitive_media_warning" in media._raw:
+                    data_tweet["media"][-1]["sensitive_warning"] = []
+                    sensitive_media_warnings = media._raw["sensitive_media_warning"].keys()
+                    for warning in sensitive_media_warnings:
+                        data_tweet["media_sensitive"].append({
+                            "type": warning,
+                            "is_sensitive": tweet.media[i]._raw["sensitive_media_warning"][warning]
+                        })
                 if "source_user" in media.__dict__ and media.source_user != None:
                     data_tweet["media"][-1]["source_user"].append({
                         "username": media.source_user.username,
