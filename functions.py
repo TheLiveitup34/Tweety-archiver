@@ -70,6 +70,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         # print
         print(f"{Fore.RED}Failed to Parse Tweet due to the following reason: {Fore.YELLOW}Tweet is a User Object{Fore.WHITE}")
         exit()
+ 
     cfg = await configurations()  
     if len(parsed_id_data) > 0:
         for parsed_id in parsed_id_data:
@@ -127,6 +128,14 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
     if len(tweet.media) > 0:
         data_tweet["media_tags"] = tweet.media[0].tagged_users
+        data_tweet["media_sensitive"] = []
+        for i in range(len(tweet.media)):
+            sensitive_media_warnings = tweet.media[i]._raw["sensitive_media_warning"].keys()
+            for warning in sensitive_media_warnings:
+                data_tweet["media_sensitive"].append({
+                    "type": warning,
+                    "is_sensitive": tweet.media[i]._raw["sensitive_media_warning"][warning]
+                })
     if "community" in tweet.__dict__:
         data_tweet["community"] = tweet.community
         data_tweet["community_role"] = tweet.author.community_role

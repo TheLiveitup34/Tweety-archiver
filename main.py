@@ -5,6 +5,8 @@
 
 import os
 import time
+import sys
+import traceback
 from functions import modify_tweet
 from functions import fetch_username
 from functions import confirm_data
@@ -211,10 +213,15 @@ async def main():
                     if DEBUG_LOGGING:
                         # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        tb = e.__traceback__
-                        while tb is not None:
-                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                            tb = tb.tb_next
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                        # Format the traceback
+                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                        # Print the formatted traceback
+                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                        for line in traceback_details:
+                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                     if "Rate limit exceeded" in str(e):
                         exit()
 
