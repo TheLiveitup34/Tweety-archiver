@@ -208,6 +208,13 @@ async def main():
                         f.close()
                 except Exception as e:
                     print(f"{Fore.RED}Failed to Modify manual Tweet id:{Fore.YELLOW}{manual}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if DEBUG_LOGGING:
+                        # loop through the traceback and print all the lines
+                        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                        tb = e.__traceback__
+                        while tb is not None:
+                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                            tb = tb.tb_next
                     if "Rate limit exceeded" in str(e):
                         exit()
 
@@ -224,6 +231,13 @@ async def main():
             except Exception as e:
                 print(f"Search was {search_string}")
                 print(f"{Fore.RED}Twitter Search failed for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if DEBUG_LOGGING:
+                        # loop through the traceback and print all the lines
+                        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                        tb = e.__traceback__
+                        while tb is not None:
+                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                            tb = tb.tb_next
                 if "Rate limit exceeded" in str(e):
                         exit()
                 input("\n\nPress Enter to Continue...")
@@ -256,9 +270,10 @@ async def main():
                     print(f"{Fore.RED}Failed to Modify searched Tweet id:{Fore.YELLOW}{tweet.id}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                     if DEBUG_LOGGING:
                         # loop through the traceback and print all the lines
-                        print(f"{Fore.RED}Traceback:{Fore.white}")
-                        for line in e.__traceback__.tb_frame.f_back:
-                            print(f"{Fore.YELLOW}{line}")
+                        tb = e.__traceback__
+                        while tb is not None:
+                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                            tb = tb.tb_next
                             
                     if "Rate limit exceeded" in str(e):
                         exit()

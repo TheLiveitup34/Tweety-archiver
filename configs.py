@@ -19,7 +19,9 @@ It includes the following settings:
 - GrabProposedNotes: Whether to grab proposed community notes from tweets.
 - GrabSpamReplies: Whether to grab spam replies from tweets (Requires GrabReplies to be True).
 - GrabBroadcasts: Whether to grab broadcasts from tweets.
-- GrabAudioSpace: Whether to grab audio space from tweets.(This may take a while as it downloads the audio in chunks due to the way twitter stores it)
+- BroadcastsResolution: The resolution of the broadcasts to grab. options (all, 1920x1080, 1280x720, 848x480, 568x320, 400x222)
+    NOTE: If you do not see a resolution that is not on the list you can enter any text and it will tell you all the available resolutions.
+- GrabAudioSpace: Whether to grab audio space from tweets.(This operation will take some time to complete as it has to convert multiple audio files to mp3 and combine them into one file)
 - GrabLists: Whether to grab list data from tweets.
 
 ============================
@@ -42,6 +44,7 @@ async def configurations():
         "GrabProposedNotes": False,
         "GrabSpamReplies": False,
         "GrabBroadcasts": False,
+        "BroadcastsResolution": "all",
         "GrabAudioSpace": False,
         "GrabLists": False
     }

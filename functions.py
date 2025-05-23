@@ -1,12 +1,14 @@
+import os
 import re
 import json
 import time
 import requests
 import shutil
-import os
 from colorama import Fore
 from configs import configurations
 from aac_to_mp3_converter import convert_aac_to_mp3
+from async_download_media import async_download_media
+from combine_ts_files_to_mp4 import combine_ts_files_to_mp4
 
 
 # Defines Paths for the app to use for path traversial
@@ -113,7 +115,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "tweet_source": tweet.source,
         "place": tweet.place,
         "warning": tweet.warning,
-        "media_tags": tweet.media[0].tagged_users,
+        
         "has_newer_version": tweet.has_newer_version,
         "has_moderated_replies": tweet.has_moderated_replies,
         "is_sensitive": tweet.is_sensitive,
@@ -123,6 +125,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "tweet_raw": tweet.text
     }
 
+    if len(tweet.media) > 0:
+        data_tweet["media_tags"] = tweet.media[0].tagged_users
     if "community" in tweet.__dict__:
         data_tweet["community"] = tweet.community
         data_tweet["community_role"] = tweet.author.community_role
@@ -212,9 +216,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 print(f"{Fore.RED}Failed to reach domain. Error: {error}")
                 if debug:
                     # loop through the traceback and print all the lines
-                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                    for line in e.__traceback__.tb_frame.f_back:
-                        print(f"{Fore.YELLOW}{line}")
+                    tb = e.__traceback__
+                    while tb is not None:
+                        print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                        tb = tb.tb_next
             if actual_url == None:
                 continue
         
@@ -259,8 +264,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     if debug:
                         # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        for line in e.__traceback__.tb_frame.f_back:
-                            print(f"{Fore.YELLOW}{line}")
+                        tb = e.__traceback__
+                        while tb is not None:
+                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                            tb = tb.tb_next
                     if "Rate limit exceeded" in str(e):
                         exit()
             else:
@@ -286,8 +293,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     if debug:
                         # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        for line in e.__traceback__.tb_frame.f_back:
-                            print(f"{Fore.YELLOW}{line}")
+                        tb = e.__traceback__
+                        while tb is not None:
+                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                            tb = tb.tb_next
                     if "Rate limit exceeded" in str(e):
                         exit()
                 if quotes == None:
@@ -316,9 +325,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         print(f"{Fore.RED}Failed to Fetch Retweet User List of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                         if debug:
                             # loop through the traceback and print all the lines
-                            print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                            for line in e.__traceback__.tb_frame.f_back:
-                                print(f"{Fore.YELLOW}{line}")
+                            tb = e.__traceback__
+                            while tb is not None:
+                                print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                                tb = tb.tb_next
                         if "Rate limit exceeded" in str(e):
                             exit()
                     if len(retweets) == 0:
@@ -350,8 +360,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 if debug:
                     # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        for line in e.__traceback__.tb_frame.f_back:
-                            print(f"{Fore.YELLOW}{line}")
+                        tb = e.__traceback__
+                        while tb is not None:
+                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                            tb = tb.tb_next
                 if "Rate limit exceeded" in str(e):
                     exit()
 
@@ -405,8 +417,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     if debug:
                         # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        for line in e.__traceback__.tb_frame.f_back:
-                            print(f"{Fore.YELLOW}{line}")
+                        tb = e.__traceback__
+                        while tb is not None:
+                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                            tb = tb.tb_next
                     if "Rate limit exceeded" in str(e):
                         exit()
                     continue
@@ -424,8 +438,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             if debug:
                                 # loop through the traceback and print all the lines
                                 print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                                for line in e.__traceback__.tb_frame.f_back:
-                                    print(f"{Fore.YELLOW}{line}")
+                                tb = e.__traceback__
+                                while tb is not None:
+                                    print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                                    tb = tb.tb_next
                             if "Rate limit exceeded" in str(e):
                                 exit()
             
@@ -444,8 +460,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         if debug:
                             # loop through the traceback and print all the lines
                             print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                            for line in e.__traceback__.tb_frame.f_back:
-                                print(f"{Fore.YELLOW}{line}")
+                            tb = e.__traceback__
+                            while tb is not None:
+                                print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                                tb = tb.tb_next
                         if "Rate limit exceeded" in str(e):
                             exit()
     
@@ -459,7 +477,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             try:
                 audiosound = await app.get_audio_space(tweet.audio_space_id)
                 audio_url = await audiosound.get_stream_link()
-                transcript_url = audio_url["source"]["location"]
+
+                transcript_url = audio_url.direct_url
                 # get everything before the last /
                 chunk_url = transcript_url.replace(transcript_url.split("/")[-1], "")
 
@@ -470,43 +489,28 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 # find all the chunck_*_a.aac files in the text
                 chunk_files = re.findall("chunk_(.*)_a\.aac", transcript_text)
                 # add chunc_ and _a.aac to the files
+               
                 chunk_files = [f"chunk_{file}_a.aac" for file in chunk_files]
 
 
                 # check if a chucks_download folder exists
-                if not os.path.exists(path_name + "media" + os.sep + current_id + os.sep + "chunks_download"):
-                    os.makedirs(path_name + "media" + os.sep + current_id + os.sep + "chunks_download")
+                chunks_dir = path_name + "media" + os.sep + current_id + os.sep + "chunks_download"
+                if not os.path.exists(chunks_dir):
+                    os.makedirs(chunks_dir)
 
-                # start downloading the chunks
-                chunk_number = 1
-                chunk_length = len(chunk_files)
-                for chunk_file in chunk_files:
-                    # clear the screen for a clean look
-                    print(f"\033[H\033[J")
-                    chunk_url_temp = f"{chunk_url}{chunk_file}"
-                    print(f"{Fore.MAGENTA}Downloading Chunk {Fore.YELLOW}{chunk_number} of {chunk_length}  {Fore.MAGENTA}Chunks from {Fore.YELLOW}Transcript{Fore.WHITE}")
-                    # print a progress bar like [============] 100%
-                    progress_bar = "[" + "=" * (chunk_number * 20 // chunk_length) + ">" + " " * (20 - (chunk_number * 20 // chunk_length)) + "]"
-                    percentage = "{:.2f}".format((chunk_number / chunk_length) * 100)
-                    print(f"{Fore.BLUE}{progress_bar} {Fore.YELLOW}{percentage}{Fore.BLUE}% {Fore.WHITE}")
-                    # check if the file already exists
-                    if os.path.exists(path_name + "media" + os.sep + current_id + os.sep + "chunks_download" + os.sep + chunk_file):
-                        chunk_number += 1
-                        time.sleep(0.0005)
-                        continue
-                    file_name = await download_media(chunk_url_temp, modify_download, verbose=False)
-                    shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + "chunks_download" + os.sep + file_name)
-                    os.remove(base_path + file_name)
-                    chunk_number += 1
 
-                chunk_files = [f"{path_name}media{os.sep}{current_id}{os.sep}chunks_download{os.sep}{file}" for file in chunk_files]
+                result = await async_download_media(media_url=chunk_url, files=chunk_files, output_path=chunks_dir, max_concurrent=15)
+                if result == None:
+                    print(f"{Fore.RED}Failed to download audio chunks{Fore.WHITE}")
+                    raise Exception("Failed to download audio chunks")
 
+                chunk_files = [f"{chunks_dir}{os.sep}{file}" for file in chunk_files]
+                
                 # convert the chunks to mp3
                 print(f"{Fore.MAGENTA}Converting {Fore.YELLOW}{len(chunk_files)} {Fore.MAGENTA}chunks to mp3...{Fore.WHITE}")
                 convert_success = convert_aac_to_mp3(
                     file_list=chunk_files,
-                    output_file=f"{path_name}media{os.sep}{current_id}{os.sep}{audiosound.id}.mp3",
-                    verbose=True
+                    output_file=f"{path_name}media{os.sep}{current_id}{os.sep}{audiosound.id}.mp3"
                 )
                 audiosound_download = True
                 if convert_success == False:
@@ -518,9 +522,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         os.remove(chunk_file)
                     # delete the chunks_download folder
                     shutil.rmtree(path_name + "media" + os.sep + current_id + os.sep + "chunks_download")
-                del chunk_files
                 del chunk_url
-                del chunk_url_temp
                 del transcript
                 del transcript_text
 
@@ -530,9 +532,12 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 if debug:
                     # loop through the traceback and print all the lines
                     print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                    for line in e.__traceback__.tb_frame.f_back:
-                        print(f"{Fore.YELLOW}{line}")
+                    tb = e.__traceback__
+                    while tb is not None:
+                        print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
+                        tb = tb.tb_next
                 if "Rate limit exceeded" in str(e):
+                    print(f"{Fore.RED}Rate limit exceeded...{Fore.WHITE}")
                     exit()
             if audiosound != None:
                 if audiosound_download == False:
@@ -554,8 +559,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     "creator": {
                         "username": audiosound.creator.username,
                         "display": audiosound.creator.name,
-                        "verified": audiosound.creator.verified,
-                        "protected": audiosound.creator.protected
+                        "verified": audiosound.creator.verified
                     },
                     "admins": [],
                     "speakers": [], 
@@ -568,20 +572,19 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "twitter_screen_name": admin.twitter_screen_name,
                         "username": admin.username,
                         "display": admin.name,
-                        "verified": admin.is_verified,
-                        "protected": admin.protected
+                        "verified": admin.is_verified
                     })
                 for speaker in audiosound.speakers:
                     data_tweet["audio_space"][-1]["speakers"].append({
                         "twitter_screen_name": speaker.twitter_screen_name,
                         "username": speaker.username,
                         "display": speaker.name,
-                        "verified": speaker.is_verified,
-                        "protected": speaker.protected
+                        "verified": speaker.is_verified
                     })
 
     if cfg["GrabBroadcasts"] == True:
         if tweet.broadcast != None:
+
             data_tweet["broadcast"] = [] 
             data_tweet["broadcast"].append({
                 "url": tweet.broadcast.url,
@@ -590,10 +593,108 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 "state": tweet.broadcast.state,
                 "source": tweet.broadcast.source,
                 "username": tweet.broadcast.username,
-                "display name": tweet.broadcast.broadcaster_name,
+                "display_name": tweet.broadcast.broadcaster_name,
                 "width": tweet.broadcast.width,
                 "height": tweet.broadcast.height
             })
+
+            print(f"{Fore.MAGENTA}Found Broadcast...{Fore.WHITE}")
+            broadcast = await tweet.broadcast.get_stream_link()
+            base_url =  "https://" + broadcast.direct_url.split("/")[2]
+            resolutions = requests.get(broadcast.direct_url)
+            resolutions = resolutions.text
+            resolutions = resolutions.split("\n")
+
+            resolution_links = {}
+            resolution_types = []
+            for i in range(len(resolutions)):
+                if "RESOLUTION" in resolutions[i]:
+                    resolution = resolutions[i].split("RESOLUTION")[1].split(",")[0][1:]
+                    resolution_links[resolution] = resolutions[i + 1]
+                    resolution_types.append(resolution)
+            broadcastResolutionValidation = True
+            if cfg["BroadcastsResolution"].lower() != "all" and cfg["BroadcastsResolution"].lower() not in resolution_types:
+                broadcastResolutionValidation = False
+                print(f"{Fore.RED}Invalid Resolution Type Provided: {Fore.YELLOW}{cfg['BroadcastsResolution']}{Fore.RED}...{Fore.WHITE}")
+                print(f"{Fore.RED}Valid Resolution Types are: {Fore.YELLOW}{Fore.WHITE}")
+                print(f"{Fore.YELLOW}  - all{Fore.WHITE}")
+                for res in resolution_types:
+                    print(f"{Fore.YELLOW}  - {res}{Fore.WHITE}")
+            
+
+            if cfg["BroadcastsResolution"].lower() != "all" and cfg["BroadcastsResolution"].lower() in resolution_types:
+                # remove all the other resolutions from the list
+                resolution_types = [cfg["BroadcastsResolution"].lower()]
+
+            if broadcastResolutionValidation == True:
+                data_tweet["broadcast"][-1]["files"] = []
+                for res_type in resolution_types:
+                    # check if the video exists already
+                    print(f"{Fore.MAGENTA}Downloading Broadcast Video...{Fore.WHITE}")
+                    chunk_url = base_url + resolution_links[res_type]
+                    transcript = requests.get(chunk_url)
+                    # get the text from the transcript
+                    transcript_text = transcript.text
+                    # find all the chunck_*_a.aac files in the text
+                    chunk_files = re.findall("chunk_(.*)_a\.ts", transcript_text)
+                    # add chunc_ and _a.aac to the files
+                    
+                    chunk_files = [f"chunk_{file}_a.ts" for file in chunk_files]
+
+                    chunk_url = chunk_url.replace(chunk_url.split("/")[-1], "")
+
+                    chunks_dir = path_name + "media" + os.sep + current_id + os.sep + "chunks_download_" + res_type 
+                    if not os.path.exists(chunks_dir):
+                        if os.path.exists(path_name + "media" + os.sep + current_id + os.sep + f"{tweet.broadcast.id}_{res_type}.mp4"):
+                            print(f"{Fore.BLUE}Found Broadcast Video: {Fore.YELLOW}{tweet.broadcast.id}_{res_type}.mp4{Fore.BLUE}...{Fore.WHITE}")
+                            data_tweet["broadcast"][-1]["files"].append({
+                                "file_name": f"{tweet.broadcast.id}_{res_type}.mp4",
+                                "resolution": res_type
+                            })
+                            continue
+                        os.makedirs(chunks_dir)
+                    else:
+                        # check how many files are in the folder
+                        files = os.listdir(chunks_dir)
+                        if len(files) != len(chunk_files):
+                            # clear the files in the folder to prevent corrupted files
+                            for file in files:
+                                os.remove(chunks_dir + os.sep + file)
+                        if os.path.exists(path_name + "media" + os.sep + current_id + os.sep + f"{tweet.broadcast.id}_{res_type}.mp4"):
+                            # remove the video file 
+                            os.remove(path_name + "media" + os.sep + current_id + os.sep + f"{tweet.broadcast.id}_{res_type}.mp4")
+                        
+                    result = await async_download_media(media_url=chunk_url, files=chunk_files, output_path=chunks_dir, max_concurrent=15)
+
+                    if result == True:
+                        print(f"{Fore.MAGENTA}Downloaded Broadcast Video...{Fore.WHITE}")
+                        # print(chunk_files)
+                        chunk_files = [f"{chunks_dir}{os.sep}{file}" for file in chunk_files]
+                        # convert the chunks to mp4
+                        print(f"{Fore.MAGENTA}Converting {Fore.YELLOW}{len(chunk_files)} {Fore.MAGENTA}chunks to mp4...{Fore.WHITE}")
+                        convert_success = combine_ts_files_to_mp4(
+                            chunk_files,
+                            f"{path_name}media{os.sep}{current_id}{os.sep}{tweet.broadcast.id}_{res_type}.mp4"
+                        )
+
+                        if convert_success == False:
+                            print(f"{Fore.RED}Failed to convert audio chunks to mp4{Fore.WHITE}")
+                        else:
+                            print(f"{Fore.MAGENTA}Converted {Fore.YELLOW}{len(chunk_files)} {Fore.MAGENTA}chunks to mp4...{Fore.WHITE}")
+                            # delete the chunks
+                            for chunk_file in chunk_files:
+                                os.remove(chunk_file)
+                            # delete the chunks_download folder
+                            shutil.rmtree(path_name + "media" + os.sep + current_id + os.sep + f"chunks_download_{res_type}")
+                        del chunk_url
+                        del chunk_files
+                        del transcript
+                        del transcript_text
+                        data_tweet["broadcast"][-1]["files"].append({
+                            "file_name": f"{tweet.broadcast.id}_{res_type}.mp4",
+                            "resolution": res_type
+                        })
+                
     # I would like to add stats, but that looks impossible currently   
 
 
@@ -610,7 +711,6 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
 # function used to fetch the target username of who isbeing scraped
 async def fetch_username():
-    confirm = ""
     user = ""
     while user == "":
         # Clear for a clean look 
