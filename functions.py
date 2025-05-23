@@ -249,7 +249,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     data_tweet["media"][-1]["sensitive_warning"] = []
                     sensitive_media_warnings = media._raw["sensitive_media_warning"].keys()
                     for warning in sensitive_media_warnings:
-                        data_tweet["media_sensitive"].append({
+                        data_tweet["media"][-1]["sensitive_warning"].append({
                             "type": warning,
                             "is_sensitive": tweet.media[i]._raw["sensitive_media_warning"][warning]
                         })
