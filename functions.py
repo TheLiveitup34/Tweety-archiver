@@ -251,7 +251,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     for warning in sensitive_media_warnings:
                         data_tweet["media"][-1]["sensitive_warning"].append({
                             "type": warning,
-                            "is_sensitive": tweet.media[i]._raw["sensitive_media_warning"][warning]
+                            "is_sensitive": media._raw["sensitive_media_warning"][warning]
                         })
                 if "source_user" in media.__dict__ and media.source_user != None:
                     data_tweet["media"][-1]["source_user"].append({
