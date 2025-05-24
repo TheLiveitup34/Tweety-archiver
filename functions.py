@@ -70,7 +70,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         # print
         print(f"{Fore.RED}Failed to Parse Tweet due to the following reason: {Fore.YELLOW}Tweet is a User Object{Fore.WHITE}")
         exit()
- 
+
     cfg = await configurations()  
     if len(parsed_id_data) > 0:
         for parsed_id in parsed_id_data:
@@ -116,7 +116,6 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         "tweet_source": tweet.source,
         "place": tweet.place,
         "warning": tweet.warning,
-        
         "has_newer_version": tweet.has_newer_version,
         "has_moderated_replies": tweet.has_moderated_replies,
         "is_sensitive": tweet.is_sensitive,
@@ -128,6 +127,25 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
     if len(tweet.media) > 0:
         data_tweet["media_tags"] = tweet.media[0].tagged_users
+    afiliate_label = None
+    if tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]["affiliates_highlighted_label"] != {}:
+        afiliate_label = tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]["affiliates_highlighted_label"]["label"]
+        print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
+        data_tweet["affiliate"] = {
+            "url": afiliate_label["url"]["url"],
+            "badge": afiliate_label["badge"]["url"],
+            "description": afiliate_label["description"],
+            "user_label_type": afiliate_label["userLabelType"],
+            "user_label_display_type": afiliate_label["userLabelDisplayType"]
+        }
+
+        if cfg["GrabMedia"] == True:
+            print(f"{Fore.MAGENTA}Downloading Affiliate Label Media...{Fore.WHITE}")
+            # download the media
+            file_name = await download_media(afiliate_label["badge"]["url"], modify_download)
+            shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
+            os.remove(base_path + file_name)
+            data_tweet["affiliate"]["badge_file_name"] = file_name
 
     if "community" in tweet.__dict__:
         data_tweet["community"] = tweet.community
