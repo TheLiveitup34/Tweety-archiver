@@ -98,6 +98,17 @@ async def main():
                 if "actionrequired" in str(e).lower() or "check your email" in str(e).lower() or "enter your" in str(e).lower():
                     action = input(f"{Fore.RED}Action Required:{Fore.YELLOW} {str(e.message)}: ")
                     await app.sign_in(username, password, extra=action)
+                if DEBUG_LOGGING:
+                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                    # Format the traceback
+                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                    # Print the formatted traceback
+                    print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                    for line in traceback_details:
+                        print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                 if "Rate limit exceeded" in str(e):
                     exit()
         else:
@@ -147,7 +158,7 @@ async def main():
         # Reset Search Strings and parsed_id_data
         search_string = "(from:" + user + ")"
         os.system("clear")
-        if os.path.exists(path_name + 'parsed_id_data.txt'):
+        if os.path.exists(path_name + 'parsed_id_data.txt') and DEBUG_LOGGING == False:
             f = open(path_name + 'parsed_id_data.txt', "r")
             parsed_id_data = f.read().split("\n")
             f.close()
@@ -205,9 +216,10 @@ async def main():
                         for ids in temp:
                             if ids not in parsed_id_data:
                                 parsed_id_data.append(ids)
-                        f = open(path_name + 'parsed_id_data.txt', "w")
-                        f.write("\n".join(parsed_id_data))
-                        f.close()
+                        if DEBUG_LOGGING == False:
+                            f = open(path_name + 'parsed_id_data.txt', "w")
+                            f.write("\n".join(parsed_id_data))
+                            f.close()
                 except Exception as e:
                     print(f"{Fore.RED}Failed to Modify manual Tweet id:{Fore.YELLOW}{manual}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                     if DEBUG_LOGGING:
@@ -241,10 +253,15 @@ async def main():
                 if DEBUG_LOGGING:
                         # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        tb = e.__traceback__
-                        while tb is not None:
-                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                            tb = tb.tb_next
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                        # Format the traceback
+                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                        # Print the formatted traceback
+                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                        for line in traceback_details:
+                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                 if "Rate limit exceeded" in str(e):
                         exit()
                 input("\n\nPress Enter to Continue...")
@@ -270,17 +287,24 @@ async def main():
                             if ids not in parsed_id_data:
                                 parsed_id_data.append(ids)
                         # Updates the parsed_id_data 
-                        f = open(path_name + 'parsed_id_data.txt', "w")
-                        f.write("\n".join(parsed_id_data))
-                        f.close()
+                        if DEBUG_LOGGING == False:
+                            f = open(path_name + 'parsed_id_data.txt', "w")
+                            f.write("\n".join(parsed_id_data))
+                            f.close()
                 except Exception as e:
                     print(f"{Fore.RED}Failed to Modify searched Tweet id:{Fore.YELLOW}{tweet.id}{Fore.RED}, for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                     if DEBUG_LOGGING:
                         # loop through the traceback and print all the lines
-                        tb = e.__traceback__
-                        while tb is not None:
-                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                            tb = tb.tb_next
+                        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                        # Format the traceback
+                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                        # Print the formatted traceback
+                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                        for line in traceback_details:
+                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                             
                     if "Rate limit exceeded" in str(e):
                         exit()

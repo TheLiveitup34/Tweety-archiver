@@ -1,6 +1,8 @@
 import os
 import re
 import json
+import sys
+import traceback
 import time
 import requests
 import shutil
@@ -127,9 +129,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
     if len(tweet.media) > 0:
         data_tweet["media_tags"] = tweet.media[0].tagged_users
+    
     afiliate_label = None
-    if tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]["affiliates_highlighted_label"] != {}:
-        afiliate_label = tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]["affiliates_highlighted_label"]["label"]
+    if "content" in tweet._raw:
+        afiliate_label = tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]["affiliates_highlighted_label"]
+    else:
+        afiliate_label = tweet._raw["item"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]["affiliates_highlighted_label"]
+    
+    if afiliate_label != {}:
+        afiliate_label = afiliate_label["label"]
         print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
         data_tweet["affiliate"] = {
             "url": afiliate_label["url"]["url"],
@@ -236,10 +244,16 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 print(f"{Fore.RED}Failed to reach domain. Error: {error}")
                 if debug:
                     # loop through the traceback and print all the lines
-                    tb = e.__traceback__
-                    while tb is not None:
-                        print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                        tb = tb.tb_next
+                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                    # Format the traceback
+                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                    # Print the formatted traceback
+                    print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                    for line in traceback_details:
+                        print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
             if actual_url == None:
                 continue
         
@@ -292,10 +306,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     if debug:
                         # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        tb = e.__traceback__
-                        while tb is not None:
-                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                            tb = tb.tb_next
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                        # Format the traceback
+                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                        # Print the formatted traceback
+                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                        for line in traceback_details:
+                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                     if "Rate limit exceeded" in str(e):
                         exit()
             else:
@@ -321,10 +340,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     if debug:
                         # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        tb = e.__traceback__
-                        while tb is not None:
-                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                            tb = tb.tb_next
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                        # Format the traceback
+                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                        # Print the formatted traceback
+                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                        for line in traceback_details:
+                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                     if "Rate limit exceeded" in str(e):
                         exit()
                 if quotes == None:
@@ -353,10 +377,16 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         print(f"{Fore.RED}Failed to Fetch Retweet User List of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                         if debug:
                             # loop through the traceback and print all the lines
-                            tb = e.__traceback__
-                            while tb is not None:
-                                print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                                tb = tb.tb_next
+                            print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                            exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                            # Format the traceback
+                            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                            # Print the formatted traceback
+                            print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                            for line in traceback_details:
+                                print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                         if "Rate limit exceeded" in str(e):
                             exit()
                     if len(retweets) == 0:
@@ -369,11 +399,39 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             "verified": retweet.verified,
                             "protected": retweet.protected,
                             "parody": retweet.is_parody_account,
-                            "commentary": retweet.author.is_commentary_account,
-                            "fan": retweet.author.is_fan_account,
+                            "commentary": retweet.is_commentary_account,
+                            "fan": retweet.is_fan_account,
                             "automated": retweet.is_automated
                         })
 
+                        afiliate_label = None
+                        if "content" in retweet._raw:
+                            afiliate_label = retweet._raw["content"]["itemContent"]["user_results"]["result"]["affiliates_highlighted_label"]
+                        else:
+                            afiliate_label = retweet._raw["item"]["itemContent"]["user_results"]["result"]["affiliates_highlighted_label"]
+                       
+                        if afiliate_label != {}:
+                            afiliate_label = afiliate_label["label"]
+                            print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
+                            data_tweet["retweet_users"][-1]["affiliate"] = {
+                                "url": afiliate_label["url"]["url"],
+                                "badge": afiliate_label["badge"]["url"],
+                                "description": afiliate_label["description"],
+                                "user_label_type": afiliate_label["userLabelType"],
+                                "user_label_display_type": afiliate_label["userLabelDisplayType"]
+                            }
+
+                            if cfg["GrabMedia"] == True:
+                                print(f"{Fore.MAGENTA}Downloading Affiliate Label Media...{Fore.WHITE}")
+                                # download the media
+                                file_name = await download_media(afiliate_label["badge"]["url"], modify_download)
+                                shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
+                                os.remove(base_path + file_name)
+                                data_tweet["retweet_users"][-1]["affiliate"]["badge_file_name"] = file_name
+
+                        if "community" in retweet.__dict__:
+                            data_tweet["retweet_users"][-1]["community"] = retweet.community
+                            data_tweet["retweet_users"][-1]["community_role"] = retweet.community_role
 
     if cfg["GrabRepliedToTweet"] == True:
         # Checks if tweet is a reply and tries to download the tweet it replied to
@@ -388,10 +446,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 if debug:
                     # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        tb = e.__traceback__
-                        while tb is not None:
-                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                            tb = tb.tb_next
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                        # Format the traceback
+                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                        # Print the formatted traceback
+                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                        for line in traceback_details:
+                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                 if "Rate limit exceeded" in str(e):
                     exit()
 
@@ -445,10 +508,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     if debug:
                         # loop through the traceback and print all the lines
                         print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        tb = e.__traceback__
-                        while tb is not None:
-                            print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                            tb = tb.tb_next
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                        # Format the traceback
+                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                        # Print the formatted traceback
+                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                        for line in traceback_details:
+                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                     if "Rate limit exceeded" in str(e):
                         exit()
                     continue
@@ -466,10 +534,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             if debug:
                                 # loop through the traceback and print all the lines
                                 print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                                tb = e.__traceback__
-                                while tb is not None:
-                                    print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                                    tb = tb.tb_next
+                                exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                                # Format the traceback
+                                traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                                # Print the formatted traceback
+                                print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                                for line in traceback_details:
+                                    print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                             if "Rate limit exceeded" in str(e):
                                 exit()
             
@@ -488,10 +561,16 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         if debug:
                             # loop through the traceback and print all the lines
                             print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                            tb = e.__traceback__
-                            while tb is not None:
-                                print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                                tb = tb.tb_next
+                            exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                            # Format the traceback
+                            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                            # Print the formatted traceback
+                            print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                            for line in traceback_details:
+                                print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+                     
                         if "Rate limit exceeded" in str(e):
                             exit()
     
@@ -560,10 +639,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 if debug:
                     # loop through the traceback and print all the lines
                     print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                    tb = e.__traceback__
-                    while tb is not None:
-                        print(f"{Fore.YELLOW}{tb.tb_frame.f_code.co_filename}:{tb.tb_lineno} - {tb.tb_frame.f_code.co_name}")
-                        tb = tb.tb_next
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                    # Format the traceback
+                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                    # Print the formatted traceback
+                    print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                    for line in traceback_details:
+                        print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
                 if "Rate limit exceeded" in str(e):
                     print(f"{Fore.RED}Rate limit exceeded...{Fore.WHITE}")
                     exit()
