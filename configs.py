@@ -23,6 +23,8 @@ It includes the following settings:
     NOTE: If you do not see a resolution that is not on the list you can enter any text and it will tell you all the available resolutions.
 - GrabAudioSpace: Whether to grab audio space from tweets.(This operation will take some time to complete as it has to convert multiple audio files to mp3 and combine them into one file)
 - GrabLists: Whether to grab list data from tweets.
+- GrabGrok: Whether to grab grok conversations from tweets.
+- GrabCommunity: Whether to grab community data from tweets.
 
 ============================
 This module is used to configure the bot's behavior and settings.
@@ -46,5 +48,7 @@ async def configurations():
         "GrabBroadcasts": False,
         "BroadcastsResolution": "all",
         "GrabAudioSpace": False,
-        "GrabLists": False
+        "GrabLists": False,
+        "GrabGrok": False,
+        "GrabCommunity": False
     }
