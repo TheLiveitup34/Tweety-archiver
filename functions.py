@@ -809,6 +809,13 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 
     # I would like to add stats, but that looks impossible currently   
 
+    if cfg["GrabGrok"] == True:
+        if tweet.grok_share != None:
+            data_tweet["grok_share"] = []
+            data_tweet["grok_share"].append({
+                "id": tweet.grok_share.id,
+                "messages": tweet.grok_share.messages
+            }) #TODO: Add image downloading, quoted tweet as well?
 
     if subtweet == False:
         # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
