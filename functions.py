@@ -294,6 +294,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             "is_sensitive": media._raw["sensitive_media_warning"][warning]
                         })
                 if "source_user" in media.__dict__ and media.source_user != None:
+                    print(f"{Fore.MAGENTA}Found Source User in Media...{Fore.WHITE}")
                     data_tweet["media"][-1]["source_user"] = []
                     data_tweet["media"][-1]["source_user"].append({
                         "username": media.source_user.username,
