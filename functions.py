@@ -13,6 +13,9 @@ from async_download_media import async_download_media
 from combine_ts_files_to_mp4 import combine_ts_files_to_mp4
 
 
+
+
+
 # Defines Paths for the app to use for path traversial
 base_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
 
@@ -128,6 +131,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
     }
 
     if len(tweet.media) > 0:
+        print(f"{Fore.MAGENTA}Found Taged users in Tweet...{Fore.WHITE}")
         data_tweet["media_tags"] = tweet.media[0].tagged_users
     
     afiliate_label = None
@@ -137,6 +141,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         afiliate_label = tweet._raw["item"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]["affiliates_highlighted_label"]
     
     if afiliate_label != {}:
+        print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
         afiliate_label = afiliate_label["label"]
         print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
         data_tweet["affiliate"] = {
@@ -156,6 +161,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             data_tweet["affiliate"]["badge_file_name"] = file_name
 
     if "community" in tweet.__dict__:
+        print(f"{Fore.MAGENTA}Found Community...{Fore.WHITE}")
         data_tweet["community"] = tweet.community
         data_tweet["community_role"] = tweet.author.community_role
 
@@ -214,6 +220,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         })
 
     if cfg["ConvertLinks"] == True:
+        print(f"{Fore.MAGENTA}Converting Twitter Shortner Links to Original Links...{Fore.WHITE}")
         data_tweet["href_links"] = []
     
         # Fetch Urls and convert them to original urls
@@ -264,6 +271,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
     if cfg["GrabMedia"] == True:
         data_tweet["media"] = []
+        print(f"{Fore.MAGENTA}Checking for Media in Tweet...{Fore.WHITE}")
     # Checks if media is in tweet data and fetches it
         if len(tweet.media) > 0:
             print(f"\n{Fore.MAGENTA}Found and Downloading All Media...{Fore.WHITE}")
@@ -278,6 +286,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     "source_user": []
                 })
                 if "sensitive_media_warning" in media._raw:
+                    print(f"{Fore.MAGENTA}Found Sensitive Media Warning...{Fore.WHITE}")
                     data_tweet["media"][-1]["sensitive_warning"] = []
                     sensitive_media_warnings = media._raw["sensitive_media_warning"].keys()
                     for warning in sensitive_media_warnings:
@@ -286,6 +295,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             "is_sensitive": media._raw["sensitive_media_warning"][warning]
                         })
                 if "source_user" in media.__dict__ and media.source_user != None:
+                    print(f"{Fore.MAGENTA}Found Source User in Media...{Fore.WHITE}")
                     data_tweet["media"][-1]["source_user"].append({
                         "username": media.source_user.username,
                         "display": media.source_user.name,
@@ -324,6 +334,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
     # Checks if tweet is a subtweet and tries to download the tweet it subtweeted
     if cfg["GrabQuoteRetweets"] == True:
         if tweet.quote_counts > 0 and subtweet == False:
+            print(f"{Fore.MAGENTA}Subtweet Detected and fetching...")
             data_tweet["tweets_quoting"] = []
             quoted_cursor = ""
             quotes = None
@@ -333,7 +344,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
 
                 try:
-                    quotes = await app.get_tweet_quotes(tweet, cursor=quoted_cursor)
+                    quotes = await app.tweet_detail_quotes(tweet, cursor=quoted_cursor)
                     quoted_cursor = quotes.cursor
                 except Exception as e:
                     print(f"{Fore.RED}Failed to Fetch Quoted Tweets of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -355,6 +366,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     quoted_cursor = None
                     continue
                 for quote in quotes:
+                    print(f"{Fore.MAGENTA}Found Quoted Tweet id: {Fore.YELLOW}{quote.id}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
                     tweetquotes = await modify_tweet(quote, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug) 
                     data_tweet["tweets_quoting"].append(tweetquotes)
 
@@ -363,6 +375,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         data_tweet["retweet_users"] = []
         # Checks if tweet has any retweets and tries to download the user list
         if tweet.retweet_counts > 0:
+                print(f"{Fore.MAGENTA}Retweet User List Detected and fetching...")
                 
                 # initaizes the loop to fetch all the users that retweeted the tweet
                 retweets_cursor = ""
@@ -371,7 +384,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         retweets_cursor = None
 
                     try:
-                        retweets = await app.get_tweet_retweets(tweet, cursor=retweets_cursor)
+                        retweets = await app.tweet_detail_retweets(tweet, cursor=retweets_cursor)
                         retweets_cursor = retweets.cursor
                     except Exception as e:
                         print(f"{Fore.RED}Failed to Fetch Retweet User List of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
@@ -393,6 +406,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         retweets_cursor = None
                         continue
                     for retweet in retweets:
+                        print(f"{Fore.MAGENTA}Found Retweet User: {Fore.YELLOW}{retweet.username}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
                         data_tweet["retweet_users"].append({
                             "username": retweet.username,
                             "display": retweet.name,
@@ -411,6 +425,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             afiliate_label = retweet._raw["item"]["itemContent"]["user_results"]["result"]["affiliates_highlighted_label"]
                        
                         if afiliate_label != {}:
+                            print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
                             afiliate_label = afiliate_label["label"]
                             print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
                             data_tweet["retweet_users"][-1]["affiliate"] = {
@@ -430,6 +445,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                                 data_tweet["retweet_users"][-1]["affiliate"]["badge_file_name"] = file_name
 
                         if "community" in retweet.__dict__:
+                            print(f"{Fore.MAGENTA}Found Community...{Fore.WHITE}")
                             data_tweet["retweet_users"][-1]["community"] = retweet.community
                             data_tweet["retweet_users"][-1]["community_role"] = retweet.community_role
 
@@ -461,12 +477,14 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
     if cfg["GrabPolls"] == True:
     # Checks if tweet Poll exists in tweet
         if tweet.pool != None:
+            print(f"{Fore.MAGENTA}Poll Detected and fetching...")
             data_tweet["poll_data"] = {}
             data_tweet["poll_data"]["id"] = tweet.pool.id
             data_tweet["poll_data"]["name"] = tweet.pool.name
             data_tweet["poll_data"]["choices"] = []
             # Gets Poll Options
             for choices in tweet.pool.choices:
+                print(f"{Fore.MAGENTA}Found Poll Option: {Fore.YELLOW}{choices.name}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
                 data_tweet["poll_data"]["choices"].append({
                     "name": choices.name, 
                     "value": choices.value, 
@@ -480,12 +498,14 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             data_tweet["poll_data"]["user_ref"] = []
 
             for user_ref in tweet.pool.user_ref:
+                print(f"{Fore.MAGENTA}Found Poll User Reference: {Fore.YELLOW}{user_ref.username}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
                 data_tweet["poll_data"]["user_ref"].append(user_ref.username)
             data_tweet["poll_data"]["is_final"] = tweet.pool.is_final
     
     if cfg["GrabReplies"] == True:   
 
         if tweet.reply_counts > 0:
+            print(f"{Fore.MAGENTA}Replies Detected and fetching...")
             data_tweet["comments"] = []
             # Start comment Loop
             comment_cursor = ""
@@ -521,12 +541,14 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         exit()
                     continue
                 if len(comments) == 0:
+                    print(f"{Fore.MAGENTA}No Comments Found for the Tweet...{Fore.WHITE}")
                     comment_cursor = None
                     continue
                 for comment in comments:
                     for tweetComment in comment.tweets:
                         try:
                             tweet_comment_data = await modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
+                            print(f"{Fore.MAGENTA}Found Comment id: {Fore.YELLOW}{tweetComment.id}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
                             if tweet_comment_data != None:
                                 data_tweet["comments"].append(tweet_comment_data)
                         except Exception as e:
@@ -549,10 +571,12 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
     if cfg["GrabEditHistory"] == True:   
         if tweet.edit_control != None:
             if len(tweet.edit_control.tweet_ids) > 1:
+                print(f"{Fore.MAGENTA}Edit History Detected and fetching...")
                 data_tweet["edit_history"] = [] 
                 edits = await app.tweet_edit_history(tweet.id)
                 for edit in edits:
                     try:
+                        print(f"{Fore.MAGENTA}Found Edit id: {Fore.YELLOW}{edit.id}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
                         edithistory = await modify_tweet(edit, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
                         if edithistory != None:
                             data_tweet["edit_history"].append(edithistory)
@@ -580,7 +604,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             audiosound = None
             data_tweet["audio_space"] = []
             audiosound_download = False
-
+            print(f"{Fore.MAGENTA}Audio Space Detected and fetching...")
             try:
                 audiosound = await app.get_audio_space(tweet.audio_space_id)
                 audio_url = await audiosound.get_stream_link()
@@ -697,6 +721,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
     if cfg["GrabBroadcasts"] == True:
         if tweet.broadcast != None:
 
+            print(f"{Fore.MAGENTA}Broadcast Detected and fetching...")
             data_tweet["broadcast"] = [] 
             data_tweet["broadcast"].append({
                 "url": tweet.broadcast.url,
@@ -811,11 +836,154 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
     if cfg["GrabGrok"] == True:
         if tweet.grok_share != None:
+            
+            def get_grok_conversation_by_uid(self, uid, cursor=None):
+                variables = {'grok_share_id': uid}
+                featuers = { 'articles_preview_enabled': True,
+                'c9s_tweet_anatomy_moderator_badge_enabled': True,
+                'communities_web_enable_tweet_community_results_fetch': True,
+                'creator_subscriptions_quote_tweet_preview_enabled': False,
+                'creator_subscriptions_tweet_preview_api_enabled': True,
+                'freedom_of_speech_not_reach_fetch_enabled': True,
+                'graphql_is_translatable_rweb_tweet_is_translatable_enabled': True,
+                'longform_notetweets_consumption_enabled': True,
+                'longform_notetweets_inline_media_enabled': True,
+                'longform_notetweets_rich_text_read_enabled': True,
+                'premium_content_api_read_enabled': False,
+                'profile_label_improvements_pcf_label_in_post_enabled': True,
+                'responsive_web_edit_tweet_api_enabled': True,
+                'responsive_web_enhance_cards_enabled': False,
+                'responsive_web_graphql_skip_user_profile_image_extensions_enabled': False,
+                'responsive_web_graphql_timeline_navigation_enabled': True,
+                'responsive_web_grok_analysis_button_from_backend': True,
+                'responsive_web_grok_analyze_button_fetch_trends_enabled': False,
+                'responsive_web_grok_analyze_post_followups_enabled': True,
+                'responsive_web_grok_image_annotation_enabled': True,
+                'responsive_web_grok_share_attachment_enabled': True,
+                'responsive_web_grok_show_grok_translated_post': False,
+                'responsive_web_jetfuel_frame': False,
+                'responsive_web_twitter_article_tweet_consumption_enabled': True,
+                'rweb_tipjar_consumption_enabled': True,
+                'standardized_nudges_misinfo': True,
+                'tweet_awards_web_tipping_enabled': False,
+                'tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled': True,
+                'verified_phone_label_enabled': False,
+                'view_counts_everywhere_api_enabled': True}
+                if cursor:
+                    variables["cursor"] = cursor
+                params = {'variables':str(json.dumps(variables, separators=(",", ":"))), 
+                          'features': str(json.dumps(featuers, separators=(",", ":")))}
+                return {'headers': {},'method':"GET", 'url': "https://x.com/i/api/graphql/Ishd84Zga7NEhblatALH6A/GrokShare",'params': params}
+            app.http._builder.get_grok_conversation_by_uid =  get_grok_conversation_by_uid
+
+            async def get_grok_conversation_by_uid(self, uid, cursor=None):
+                request_data = self._builder.get_grok_conversation_by_uid(self._builder, uid, cursor)
+                # convert response_data from tuple to a mapping
+                response = await self.__get_response__(**request_data)
+                return response
+            app.http.get_grok_conversation_by_uid = get_grok_conversation_by_uid
+
+
+           
             data_tweet["grok_share"] = []
             data_tweet["grok_share"].append({
                 "id": tweet.grok_share.id,
-                "messages": tweet.grok_share.messages
-            }) #TODO: Add image downloading, quoted tweet as well?
+                "messages": []
+            }) 
+            cursor = None
+            try:
+                # grok_response = await app.http.get_grok_conversation_by_id(tweet.id, cursor=cursor)
+                grok_response = await app.http.get_grok_conversation_by_uid(app.http, tweet.grok_share.id, cursor=None)
+                messages = grok_response["data"]["grokShare"]["items"]
+                for message in messages:
+                    data_tweet["grok_share"][-1]["messages"].append({
+                        "message" : message["message"],
+                        "sender": message["sender"]
+                    })
+                    if "file_attachments" in message:
+                        data_tweet["grok_share"][-1]["messages"][-1]["file_attachments"] = []
+                        for file in message["file_attachments"]:
+                            data_tweet["grok_share"][-1]["messages"][-1]["file_attachments"].append({
+                                "type": file["mime_type"],
+                                "url": file["url"]
+                            })
+                            if cfg["GrabMedia"] == True:
+                                print(f"{Fore.MAGENTA}Downloading Grok Share Media...{Fore.WHITE}")
+                                file_name = await download_media(file["url"], modify_download, verbose=True)
+                                shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
+                                os.remove(base_path + file_name)
+                                data_tweet["grok_share"][-1]["messages"][-1]["file_attachments"][-1]["file_name"] = file_name
+                    if "web_results" in message:
+                        print(f"{Fore.MAGENTA}Found Web Results...{Fore.WHITE}")
+                        data_tweet["grok_share"][-1]["messages"][-1]["web_results"] = []
+                        for web_result in message["web_results"]:
+                            data_tweet["grok_share"][-1]["messages"][-1]["web_results"].append({
+                                "title": web_result.get("title", None),
+                                "url": web_result.get("url", None),
+                                "snippet": web_result.get("snippet", None),
+                                "language": web_result.get("language", None),
+                                "favicon": web_result.get("favicon", None),
+                                "favicon_base64": web_result.get("favicon_base64", None)
+                            })
+                    if "cited_web_results" in message:
+                        print(f"{Fore.MAGENTA}Found Cited Web Results...{Fore.WHITE}")
+                        data_tweet["grok_share"][-1]["messages"][-1]["cited_web_results"] = []
+                        for cited_web_result in message["cited_web_results"]:
+                            data_tweet["grok_share"][-1]["messages"][-1]["cited_web_results"].append({
+                                "title": cited_web_result.get("title", None),
+                                "url": cited_web_result.get("url", None),
+                                "snippet": cited_web_result.get("snippet", None),
+                                "language": cited_web_result.get("language", None),
+                                "favicon": cited_web_result.get("favicon", None),
+                                "favicon_base64": cited_web_result.get("favicon_base64", None)
+                            })
+                    if "post_ids_results" in message:
+                        print(f"{Fore.MAGENTA}Found Grok Users refrenced...{Fore.WHITE}")
+                        data_tweet["grok_share"][-1]["messages"][-1]["post_id_results"] = []
+                        for post_id in message["post_ids_results"]:
+                            try:
+                                post = await app.tweet_detail(post_id["result"]['rest_id'])
+                                print(f"{Fore.MAGENTA}Found Grok Share Post...{Fore.WHITE}")
+                                post_data = await modify_tweet(post, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
+                                if post_data != None:   
+                                    data_tweet["grok_share"][-1]["messages"][-1]["post_id_results"].append(post_data)
+                            except Exception as e:
+                                print(f"{Fore.RED}Failed to Scrape Grok Share Post for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                                if debug:
+                                    # loop through the traceback and print all the lines
+                                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                                    exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                                    # Format the traceback
+                                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                                    # Print the formatted traceback
+                                    print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                                    for line in traceback_details:
+                                        print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+                                    
+                                if "Rate limit exceeded" in str(e):
+                                    print(f"{Fore.RED}Rate limit exceeded...{Fore.WHITE}")
+                                    exit()
+
+
+            except Exception as e:
+                print(f"{Fore.RED}Failed to Scrape Grok Share for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                if debug:
+                    # loop through the traceback and print all the lines
+                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                    # Format the traceback
+                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                    # Print the formatted traceback
+                    print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                    for line in traceback_details:
+                        print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+                if "Rate limit exceeded" in str(e):
+                    print(f"{Fore.RED}Rate limit exceeded...{Fore.WHITE}")
+                    exit()
 
     if subtweet == False:
         # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
