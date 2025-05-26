@@ -721,6 +721,53 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
     if cfg["GrabBroadcasts"] == True:
         if tweet.broadcast != None:
 
+            # write custom function to get broadcast by id
+            def get_broadcast_by_id(self, broadcast_id):
+                variables = {'id': broadcast_id}
+                features = {
+                    'articles_preview_enabled': True,
+                    'c9s_tweet_anatomy_moderator_badge_enabled': True,
+                    'communities_web_enable_tweet_community_results_fetch': True,
+                    'creator_subscriptions_quote_tweet_preview_enabled': False,
+                    'creator_subscriptions_tweet_preview_api_enabled': True,
+                    'freedom_of_speech_not_reach_fetch_enabled': True,
+                    'graphql_is_translatable_rweb_tweet_is_translatable_enabled': True,
+                    'longform_notetweets_consumption_enabled': True,
+                    'longform_notetweets_inline_media_enabled': True,
+                    'longform_notetweets_rich_text_read_enabled': True,
+                    'premium_content_api_read_enabled': False,
+                    'profile_label_improvements_pcf_label_in_post_enabled': True,
+                    'responsive_web_edit_tweet_api_enabled': True,
+                    'responsive_web_enhance_cards_enabled': False,
+                    'responsive_web_graphql_skip_user_profile_image_extensions_enabled': False,
+                    'responsive_web_graphql_timeline_navigation_enabled': True,
+                    'responsive_web_grok_analysis_button_from_backend': True,
+                    'responsive_web_grok_analyze_button_fetch_trends_enabled': False,
+                    'responsive_web_grok_analyze_post_followups_enabled': True,
+                    'responsive_web_grok_image_annotation_enabled': True,
+                    'responsive_web_grok_share_attachment_enabled': True,
+                    'responsive_web_grok_show_grok_translated_post': False,
+                    'responsive_web_jetfuel_frame': False,
+                    'responsive_web_twitter_article_tweet_consumption_enabled': True,
+                    'rweb_tipjar_consumption_enabled': True,
+                    'standardized_nudges_misinfo': True,
+                    'tweet_awards_web_tipping_enabled': False,
+                    'tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled': True,
+                    'verified_phone_label_enabled': False,
+                    'view_counts_everywhere_api_enabled': True
+                }
+                params = {
+                    'variables': json.dumps(variables, separators=(',', ':')),
+                    'features': json.dumps(features, separators=(',', ':')),
+                }
+                return {'headers': {},'method':"GET", 'url': "https://x.com/i/api/graphql/TVpOsxrXbB4yWQYxGCjBbw/BroadcastQuery",'params': params}
+            app.http._builder.get_broadcast_by_id = get_broadcast_by_id
+            async def get_broadcast_by_id(self, broadcast_id):
+                response_data = self._builder.get_broadcast_by_id(self._builder, broadcast_id)
+                response = await self.__get_response__(**response_data)
+                return response
+            app.http.get_broadcast_by_id = get_broadcast_by_id
+
             print(f"{Fore.MAGENTA}Broadcast Detected and fetching...")
             data_tweet["broadcast"] = [] 
             data_tweet["broadcast"].append({
@@ -737,6 +784,13 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
             print(f"{Fore.MAGENTA}Found Broadcast...{Fore.WHITE}")
             broadcast = await tweet.broadcast.get_stream_link()
+            broadcast_id = broadcast.share_url.split("/")[-1]
+
+            broadcast_info = await app.http.get_broadcast_by_id(app.http, broadcast_id)
+            data_tweet["broadcast"][-1]["view_count"] = broadcast_info["data"]["broadcast"]["total_watched"]
+            data_tweet["broadcast"][-1]["live_count"] = broadcast_info["data"]["broadcast"]["total_watching"]
+            data_tweet["broadcast"][-1]["replay_count"] = broadcast_info["data"]["broadcast"]["total_watched"] - broadcast_info["data"]["broadcast"]["total_watching"]
+
             base_url =  "https://" + broadcast.direct_url.split("/")[2]
             resolutions = requests.get(broadcast.direct_url)
             resolutions = resolutions.text
