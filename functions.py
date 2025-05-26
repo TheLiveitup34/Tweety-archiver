@@ -283,7 +283,6 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     "url": media.url,
                     "alt_text": media.alt_text,
                     "file_name": file_name,
-                    "source_user": []
                 })
                 if "sensitive_media_warning" in media._raw:
                     print(f"{Fore.MAGENTA}Found Sensitive Media Warning...{Fore.WHITE}")
@@ -296,11 +295,17 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         })
                 if "source_user" in media.__dict__ and media.source_user != None:
                     print(f"{Fore.MAGENTA}Found Source User in Media...{Fore.WHITE}")
+                    data_tweet["media"][-1]["source_user"] = []
                     data_tweet["media"][-1]["source_user"].append({
                         "username": media.source_user.username,
                         "display": media.source_user.name,
                         "verified": media.source_user.verified
                     })
+                    data_tweet["media"][-1]["source_user_tweet"] = []
+                    sourceusertweetid = media._raw["source_status_id_str"]
+                    sourceusertweetdetails = await app.tweet_detail(sourceusertweetid)
+                    sourceusertweet = await modify_tweet(sourceusertweetdetails, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
+                    data_tweet["media"][-1]["source_user_tweet"].append(sourceusertweet)
             
     # Checks if tweet is Quoting another tweet and tries to download the tweet it quoted
     if cfg["GrabTweetQuoted"] == True:
