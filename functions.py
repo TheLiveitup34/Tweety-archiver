@@ -303,9 +303,26 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     })
                     data_tweet["media"][-1]["source_user_tweet"] = []
                     sourceusertweetid = media._raw["source_status_id_str"]
-                    sourceusertweetdetails = await app.tweet_detail(sourceusertweetid)
-                    sourceusertweet = await modify_tweet(sourceusertweetdetails, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
-                    data_tweet["media"][-1]["source_user_tweet"].append(sourceusertweet)
+                    try:
+                        sourceusertweetdetails = await app.tweet_detail(sourceusertweetid)
+                        sourceusertweet = await modify_tweet(sourceusertweetdetails, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
+                        data_tweet["media"][-1]["source_user_tweet"].append(sourceusertweet)
+                    except Exception as e:
+                        print(f"{Fore.RED}Failed to Fetch Source User Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                        if debug:
+                            # loop through the traceback and print all the lines
+                            print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                            exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                            # Format the traceback
+                            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                            # Print the formatted traceback
+                            print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                            for line in traceback_details:
+                                print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+                        if "Rate limit exceeded" in str(e):
+                            exit()
             
     # Checks if tweet is Quoting another tweet and tries to download the tweet it quoted
     if cfg["GrabTweetQuoted"] == True:
