@@ -6,16 +6,15 @@
 import os
 import time
 import sys
-import traceback
-from functions import modify_tweet
-from functions import fetch_username
-from functions import confirm_data
-from tweety import TwitterAsync
 import asyncio
-from tweety.filters import SearchFilters
+import traceback
+from http_mixin import inject_functions_to_api
 from colorama import Fore
+from tweety import TwitterAsync
+from tweety.filters import SearchFilters
+from functions import modify_tweet, fetch_username, confirm_data
 
-DEBUG_LOGGING = False
+DEBUG_LOGGING = True
 
 async def main():
     # Defines Paths for the app to use for path traversial
@@ -116,6 +115,31 @@ async def main():
     else:
         print(f"{Fore.YELLOW}Detected Session, Attempting to login...{Fore.WHITE}")
         await app.connect()
+     # Injects functions to the app to allow for more functionality
+    print(f"{Fore.YELLOW}Injecting More Api Requests to Tweety...{Fore.WHITE}")    
+    app = inject_functions_to_api(app)
+
+    function_names = ["get_grok_conversation_by_uid", "get_broadcast_by_id"]
+    failed_functions_count = 0
+    for function_name in function_names:
+        if hasattr(app.http, function_name):
+            print(f"{Fore.GREEN}Successfully injected {function_name} into Tweety{Fore.WHITE}")
+        else:
+            print(f"{Fore.RED}Failed to inject {function_name} into Tweety{Fore.WHITE}")
+            failed_functions_count += 1
+        # check if the function is avliable in app.http._builder
+        if hasattr(app.http._builder, function_name):
+            print(f"{Fore.GREEN}Successfully injected {function_name} into Tweety's _builder{Fore.WHITE}")
+        else:
+            print(f"{Fore.RED}Failed to inject {function_name} into Tweety's _builder{Fore.WHITE}")
+            failed_functions_count += 1
+    # If any functions failed to inject, exit the program
+    if failed_functions_count > 0:
+        print(f"{Fore.RED}Failed to inject {failed_functions_count} functions into Tweety{Fore.WHITE}")
+        print(f"{Fore.RED}Please report this issue to the developer{Fore.WHITE}")
+        exit()
+    print(f"{Fore.GREEN}Successfully injected all functions into Tweety{Fore.WHITE}")
+    
     # Start of username validation Loop
     username_valid = False
     user = ""
@@ -198,6 +222,9 @@ async def main():
                     print(f"Added Since {until} to search")
                 else:
                     print("No Since Entered Continuing...\n")
+
+
+
 
         # Get checks if manual.txt exist and pulls from it to input manual twitter links/ID's
         if os.path.exists(base_path + 'manual.txt') and fetched_manual == False:

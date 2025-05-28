@@ -8,12 +8,7 @@ import requests
 import shutil
 from colorama import Fore
 from configs import configurations
-from aac_to_mp3_converter import convert_aac_to_mp3
-from async_download_media import async_download_media
-from combine_ts_files_to_mp4 import combine_ts_files_to_mp4
-
-
-
+from convert_utils import convert_aac_to_mp3, async_download_media, combine_ts_files_to_mp4
 
 
 # Defines Paths for the app to use for path traversial
@@ -159,11 +154,15 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
             os.remove(base_path + file_name)
             data_tweet["affiliate"]["badge_file_name"] = file_name
-
-    if "community" in tweet.__dict__:
-        print(f"{Fore.MAGENTA}Found Community...{Fore.WHITE}")
-        data_tweet["community"] = tweet.community
-        data_tweet["community_role"] = tweet.author.community_role
+    try:
+        if "community" in tweet.__dict__:
+            print(f"{Fore.MAGENTA}Found Community...{Fore.WHITE}")
+            data_tweet["community"] = tweet.community
+            data_tweet["community_role"] = tweet.author.community_role
+    except Exception as e:
+        print(f"{Fore.RED}Failed to Fetch Community Data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+        if "Rate limit exceeded" in str(e):
+            exit()
 
     if cfg["GrabArticles"] == True:
         if "article" in tweet.__dict__ and tweet.article != None:
@@ -743,52 +742,6 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
     if cfg["GrabBroadcasts"] == True:
         if tweet.broadcast != None:
 
-            # write custom function to get broadcast by id
-            def get_broadcast_by_id(self, broadcast_id):
-                variables = {'id': broadcast_id}
-                features = {
-                    'articles_preview_enabled': True,
-                    'c9s_tweet_anatomy_moderator_badge_enabled': True,
-                    'communities_web_enable_tweet_community_results_fetch': True,
-                    'creator_subscriptions_quote_tweet_preview_enabled': False,
-                    'creator_subscriptions_tweet_preview_api_enabled': True,
-                    'freedom_of_speech_not_reach_fetch_enabled': True,
-                    'graphql_is_translatable_rweb_tweet_is_translatable_enabled': True,
-                    'longform_notetweets_consumption_enabled': True,
-                    'longform_notetweets_inline_media_enabled': True,
-                    'longform_notetweets_rich_text_read_enabled': True,
-                    'premium_content_api_read_enabled': False,
-                    'profile_label_improvements_pcf_label_in_post_enabled': True,
-                    'responsive_web_edit_tweet_api_enabled': True,
-                    'responsive_web_enhance_cards_enabled': False,
-                    'responsive_web_graphql_skip_user_profile_image_extensions_enabled': False,
-                    'responsive_web_graphql_timeline_navigation_enabled': True,
-                    'responsive_web_grok_analysis_button_from_backend': True,
-                    'responsive_web_grok_analyze_button_fetch_trends_enabled': False,
-                    'responsive_web_grok_analyze_post_followups_enabled': True,
-                    'responsive_web_grok_image_annotation_enabled': True,
-                    'responsive_web_grok_share_attachment_enabled': True,
-                    'responsive_web_grok_show_grok_translated_post': False,
-                    'responsive_web_jetfuel_frame': False,
-                    'responsive_web_twitter_article_tweet_consumption_enabled': True,
-                    'rweb_tipjar_consumption_enabled': True,
-                    'standardized_nudges_misinfo': True,
-                    'tweet_awards_web_tipping_enabled': False,
-                    'tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled': True,
-                    'verified_phone_label_enabled': False,
-                    'view_counts_everywhere_api_enabled': True
-                }
-                params = {
-                    'variables': json.dumps(variables, separators=(',', ':')),
-                    'features': json.dumps(features, separators=(',', ':')),
-                }
-                return {'headers': {},'method':"GET", 'url': "https://x.com/i/api/graphql/TVpOsxrXbB4yWQYxGCjBbw/BroadcastQuery",'params': params}
-            app.http._builder.get_broadcast_by_id = get_broadcast_by_id
-            async def get_broadcast_by_id(self, broadcast_id):
-                response_data = self._builder.get_broadcast_by_id(self._builder, broadcast_id)
-                response = await self.__get_response__(**response_data)
-                return response
-            app.http.get_broadcast_by_id = get_broadcast_by_id
 
             print(f"{Fore.MAGENTA}Broadcast Detected and fetching...")
             data_tweet["broadcast"] = [] 
@@ -908,59 +861,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             "resolution": res_type
                         })
                 
-    # I would like to add stats, but that looks impossible currently   
 
     if cfg["GrabGrok"] == True:
         if tweet.grok_share != None:
             
-            def get_grok_conversation_by_uid(self, uid, cursor=None):
-                variables = {'grok_share_id': uid}
-                featuers = { 'articles_preview_enabled': True,
-                'c9s_tweet_anatomy_moderator_badge_enabled': True,
-                'communities_web_enable_tweet_community_results_fetch': True,
-                'creator_subscriptions_quote_tweet_preview_enabled': False,
-                'creator_subscriptions_tweet_preview_api_enabled': True,
-                'freedom_of_speech_not_reach_fetch_enabled': True,
-                'graphql_is_translatable_rweb_tweet_is_translatable_enabled': True,
-                'longform_notetweets_consumption_enabled': True,
-                'longform_notetweets_inline_media_enabled': True,
-                'longform_notetweets_rich_text_read_enabled': True,
-                'premium_content_api_read_enabled': False,
-                'profile_label_improvements_pcf_label_in_post_enabled': True,
-                'responsive_web_edit_tweet_api_enabled': True,
-                'responsive_web_enhance_cards_enabled': False,
-                'responsive_web_graphql_skip_user_profile_image_extensions_enabled': False,
-                'responsive_web_graphql_timeline_navigation_enabled': True,
-                'responsive_web_grok_analysis_button_from_backend': True,
-                'responsive_web_grok_analyze_button_fetch_trends_enabled': False,
-                'responsive_web_grok_analyze_post_followups_enabled': True,
-                'responsive_web_grok_image_annotation_enabled': True,
-                'responsive_web_grok_share_attachment_enabled': True,
-                'responsive_web_grok_show_grok_translated_post': False,
-                'responsive_web_jetfuel_frame': False,
-                'responsive_web_twitter_article_tweet_consumption_enabled': True,
-                'rweb_tipjar_consumption_enabled': True,
-                'standardized_nudges_misinfo': True,
-                'tweet_awards_web_tipping_enabled': False,
-                'tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled': True,
-                'verified_phone_label_enabled': False,
-                'view_counts_everywhere_api_enabled': True}
-                if cursor:
-                    variables["cursor"] = cursor
-                params = {'variables':str(json.dumps(variables, separators=(",", ":"))), 
-                          'features': str(json.dumps(featuers, separators=(",", ":")))}
-                return {'headers': {},'method':"GET", 'url': "https://x.com/i/api/graphql/Ishd84Zga7NEhblatALH6A/GrokShare",'params': params}
-            app.http._builder.get_grok_conversation_by_uid =  get_grok_conversation_by_uid
-
-            async def get_grok_conversation_by_uid(self, uid, cursor=None):
-                request_data = self._builder.get_grok_conversation_by_uid(self._builder, uid, cursor)
-                # convert response_data from tuple to a mapping
-                response = await self.__get_response__(**request_data)
-                return response
-            app.http.get_grok_conversation_by_uid = get_grok_conversation_by_uid
-
-
-           
             data_tweet["grok_share"] = []
             data_tweet["grok_share"].append({
                 "id": tweet.grok_share.id,
@@ -1061,6 +965,98 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     print(f"{Fore.RED}Rate limit exceeded...{Fore.WHITE}")
                     exit()
 
+    if cfg["GrabCommunity"] == True:
+        
+       """
+        Work in progress, this will be used to fetch community data from tweets.
+        currently any tweets that are in community are broken
+       """
+        
+        # if "community_details" in json.dumps(tweet._raw):
+        #     print("Comunity_details detected in tweet._raw, fetching community data...")
+        #     data_tweet["community"] = {}
+        #     comunity_data = ""
+        #     if "content" in tweet._raw:
+        #         comunity_data = tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["card"]["legacy"]["binding_values"][0]["value"]["string_value"]
+        #     else:
+        #         comunity_data = tweet._raw["item"]["itemContent"]["tweet_results"]["result"]["card"]["legacy"]["binding_values"][0]["value"]["string_value"]
+        #     comunity_data = json.loads(comunity_data.replace('\"', '"').replace("\\'", "'").replace("\\\\", "\\"))
+        #     print(json.dumps(comunity_data, indent=4))
+        #     print(f"{Fore.MAGENTA}Community Detected and fetching...")
+
+    if cfg["GrabLists"] == True:
+        if "list_details" in json.dumps(tweet._raw):
+            print(f"{Fore.MAGENTA}List Details Detected and fetching...{Fore.WHITE}")
+            data_tweet["list_details"] = []
+            if "content" in tweet._raw:
+                list_details = tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["card"]["legacy"]["binding_values"][0]["value"]["string_value"]
+            else:
+                list_details = tweet._raw["item"]["itemContent"]["tweet_results"]["result"]["card"]["legacy"]["binding_values"][0]["value"]["string_value"]
+            list_details = json.loads(list_details.replace('\"', '"').replace("\\'", "'").replace("\\\\", "\\"))
+            list_id = list_details["destination_objects"]["destination_1"]["data"]["url_data"]["url"].split("/")[-1]
+
+            list_data = await app.get_list(list_id)
+            data_tweet["list_details"].append({
+                "id": list_data.id,
+                "name": list_data.name,
+                "description": list_data.description,
+                "member_count": list_data.member_count,
+                "subscriber_count": list_data.subscriber_count,
+                "created_at": str(list_data.created_at),
+                "admin": {
+                    "username": list_data.admin.username,
+                    "display": list_data.admin.name,
+                    "verified": list_data.admin.verified,
+                    "protected": list_data.admin.protected,
+                    "parody": list_data.admin.is_parody_account,
+                    "commentary": list_data.admin.is_commentary_account,
+                    "fan": list_data.admin.is_fan_account,
+                    "automated": list_data.admin.is_automated
+                },
+                "users": []
+            })
+
+            cursor = ""
+            list_users = []
+            while cursor != None:
+                if cursor == "":
+                    cursor = None
+                try:
+                    list_users = await app.get_list_member(list_id, cursor=cursor)
+                    cursor = list_users.cursor
+                except Exception as e:
+                    print(f"{Fore.RED}Failed to Fetch List Users for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                    if debug:
+                        # loop through the traceback and print all the lines
+                        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                        # Format the traceback
+                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                        # Print the formatted traceback
+                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                        for line in traceback_details:
+                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+                    if "Rate limit exceeded" in str(e):
+                        exit()
+                    continue
+                if len(list_users) == 0:
+                    print(f"{Fore.MAGENTA}No Users Found for the List...{Fore.WHITE}")
+                    cursor = None
+                    continue
+                for user in list_users:
+                    data_tweet["list_details"][-1]["users"].append({
+                        "username": user.username,
+                        "display": user.name,
+                        "verified": user.verified,
+                        "protected": user.protected,
+                        "parody": user.is_parody_account,
+                        "commentary": user.is_commentary_account,
+                        "fan": user.is_fan_account,
+                        "automated": user.is_automated
+                    })
+
     if subtweet == False:
         # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
         f = open(path_name + "media" + os.sep + tweet.id + os.sep + tweet.id + ".json", "w")
@@ -1106,4 +1102,3 @@ async def confirm_data(msg =""):
             return False
     return True
 
-  
