@@ -14,8 +14,8 @@ from tweety import TwitterAsync
 from tweety.filters import SearchFilters
 from functions import modify_tweet, fetch_username, confirm_data
 
-DEBUG_LOGGING = True
-
+DEBUG_LOGGING = False
+MIXIN_HTTP = ["get_grok_conversation_by_uid", "get_broadcast_by_id", "get_list_subscribers"]
 async def main():
     # Defines Paths for the app to use for path traversial
     base_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
@@ -119,9 +119,8 @@ async def main():
     print(f"{Fore.YELLOW}Injecting More Api Requests to Tweety...{Fore.WHITE}")    
     app = inject_functions_to_api(app)
 
-    function_names = ["get_grok_conversation_by_uid", "get_broadcast_by_id"]
     failed_functions_count = 0
-    for function_name in function_names:
+    for function_name in MIXIN_HTTP:
         if hasattr(app.http, function_name):
             print(f"{Fore.GREEN}Successfully injected {function_name} into Tweety{Fore.WHITE}")
         else:

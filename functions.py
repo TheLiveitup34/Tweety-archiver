@@ -129,15 +129,13 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         print(f"{Fore.MAGENTA}Found Taged users in Tweet...{Fore.WHITE}")
         data_tweet["media_tags"] = tweet.media[0].tagged_users
     
-    afiliate_label = None
-    if "content" in tweet._raw:
-        afiliate_label = tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]["affiliates_highlighted_label"]
-    else:
-        afiliate_label = tweet._raw["item"]["itemContent"]["tweet_results"]["result"]["core"]["user_results"]["result"]["affiliates_highlighted_label"]
-    
+    afiliate_label = find_objects(tweet._raw, "userLabelDisplayType", "Badge", none_value={})
+
     if afiliate_label != {}:
+        # check if afiliate_label is a list or a dict
+        if isinstance(afiliate_label, list):
+            afiliate_label = afiliate_label[0]
         print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
-        afiliate_label = afiliate_label["label"]
         print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
         data_tweet["affiliate"] = {
             "url": afiliate_label["url"]["url"],
@@ -439,15 +437,14 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             "automated": retweet.is_automated
                         })
 
-                        afiliate_label = None
-                        if "content" in retweet._raw:
-                            afiliate_label = retweet._raw["content"]["itemContent"]["user_results"]["result"]["affiliates_highlighted_label"]
-                        else:
-                            afiliate_label = retweet._raw["item"]["itemContent"]["user_results"]["result"]["affiliates_highlighted_label"]
-                       
+                            
+                        afiliate_label = find_objects(tweet._raw, "userLabelDisplayType", "Badge", none_value={})
+
                         if afiliate_label != {}:
+                            # check if afiliate_label is a list or a dict
+                            if isinstance(afiliate_label, list):
+                                afiliate_label = afiliate_label[0]
                             print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
-                            afiliate_label = afiliate_label["label"]
                             print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
                             data_tweet["retweet_users"][-1]["affiliate"] = {
                                 "url": afiliate_label["url"]["url"],
@@ -988,75 +985,140 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         if "list_details" in json.dumps(tweet._raw):
             print(f"{Fore.MAGENTA}List Details Detected and fetching...{Fore.WHITE}")
             data_tweet["list_details"] = []
-            if "content" in tweet._raw:
-                list_details = tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["card"]["legacy"]["binding_values"][0]["value"]["string_value"]
-            else:
-                list_details = tweet._raw["item"]["itemContent"]["tweet_results"]["result"]["card"]["legacy"]["binding_values"][0]["value"]["string_value"]
-            list_details = json.loads(list_details.replace('\"', '"').replace("\\'", "'").replace("\\\\", "\\"))
-            list_id = list_details["destination_objects"]["destination_1"]["data"]["url_data"]["url"].split("/")[-1]
+            # print(json.dumps(tweet._raw, indent=4))
+            list_details = find_objects(tweet._raw, "key", "unified_card", none_value=[])
+            if list_details != []:
+                list_details = json.loads(list_details["value"]["string_value"].replace('\"', '"').replace("\\'", "'").replace("\\\\", "\\"))
+                list_details = find_objects(list_details, "vanity", "twitter.com", none_value=[])
+                if list_details != []:
+                    list_id = list_details["url"].split("/")[-1]
 
-            list_data = await app.get_list(list_id)
-            data_tweet["list_details"].append({
-                "id": list_data.id,
-                "name": list_data.name,
-                "description": list_data.description,
-                "member_count": list_data.member_count,
-                "subscriber_count": list_data.subscriber_count,
-                "created_at": str(list_data.created_at),
-                "admin": {
-                    "username": list_data.admin.username,
-                    "display": list_data.admin.name,
-                    "verified": list_data.admin.verified,
-                    "protected": list_data.admin.protected,
-                    "parody": list_data.admin.is_parody_account,
-                    "commentary": list_data.admin.is_commentary_account,
-                    "fan": list_data.admin.is_fan_account,
-                    "automated": list_data.admin.is_automated
-                },
-                "users": []
-            })
 
-            cursor = ""
-            list_users = []
-            while cursor != None:
-                if cursor == "":
-                    cursor = None
-                try:
-                    list_users = await app.get_list_member(list_id, cursor=cursor)
-                    cursor = list_users.cursor
-                except Exception as e:
-                    print(f"{Fore.RED}Failed to Fetch List Users for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                    if debug:
-                        # loop through the traceback and print all the lines
-                        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                        # Format the traceback
-                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                        # Print the formatted traceback
-                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                        for line in traceback_details:
-                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                    if "Rate limit exceeded" in str(e):
-                        exit()
-                    continue
-                if len(list_users) == 0:
-                    print(f"{Fore.MAGENTA}No Users Found for the List...{Fore.WHITE}")
-                    cursor = None
-                    continue
-                for user in list_users:
-                    data_tweet["list_details"][-1]["users"].append({
-                        "username": user.username,
-                        "display": user.name,
-                        "verified": user.verified,
-                        "protected": user.protected,
-                        "parody": user.is_parody_account,
-                        "commentary": user.is_commentary_account,
-                        "fan": user.is_fan_account,
-                        "automated": user.is_automated
+                    list_data = await app.get_list(list_id)
+                    data_tweet["list_details"].append({
+                        "id": list_data.id,
+                        "name": list_data.name,
+                        "description": list_data.description,
+                        "member_count": list_data.member_count,
+                        "subscriber_count": list_data.subscriber_count,
+                        "created_at": str(list_data.created_at),
+                        "admin": {
+                            "username": list_data.admin.username,
+                            "display": list_data.admin.name,
+                            "verified": list_data.admin.verified,
+                            "protected": list_data.admin.protected,
+                            "parody": list_data.admin.is_parody_account,
+                            "commentary": list_data.admin.is_commentary_account,
+                            "fan": list_data.admin.is_fan_account,
+                            "automated": list_data.admin.is_automated
+                        },
+                        "members": [],
+                        "subscribers": []
                     })
 
+                    cursor = ""
+                    list_users = []
+                    while cursor != None:
+                        if cursor == "":
+                            cursor = None
+                        try:
+                            list_users = await app.get_list_member(list_id, cursor=cursor)
+                            cursor = list_users.cursor
+                        except Exception as e:
+                            print(f"{Fore.RED}Failed to Fetch List Users for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                            if debug:
+                                # loop through the traceback and print all the lines
+                                print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                                exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                                # Format the traceback
+                                traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                                # Print the formatted traceback
+                                print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                                for line in traceback_details:
+                                    print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+                            if "Rate limit exceeded" in str(e):
+                                exit()
+                            continue
+                        if len(list_users) == 0:
+                            print(f"{Fore.MAGENTA}No Users Found for the List...{Fore.WHITE}")
+                            cursor = None
+                            continue
+                        for user in list_users:
+                            data_tweet["list_details"][-1]["members"].append({
+                                "username": user.username,
+                                "display": user.name,
+                                "verified": user.verified,
+                                "protected": user.protected,
+                                "parody": user.is_parody_account,
+                                "commentary": user.is_commentary_account,
+                                "fan": user.is_fan_account,
+                                "automated": user.is_automated
+                            })
+                    cursor = ""
+                    print(f"{Fore.MAGENTA}Fetching List Subscribers...{Fore.WHITE}")
+                    while cursor != None:
+                        found_subscribers = []
+                        if cursor == "":
+                            cursor = None
+                        try:
+                            list_subscribers = await app.http.get_list_subscribers(app.http, list_id, cursor=cursor)
+                            cursor =  find_objects(list_subscribers, "cursorType", "Bottom", none_value={}).get("value", None)
+                            list_subscribers = find_objects(list_subscribers, "__typename", "User", none_value=[])
+                            # filter out anything but rest_id
+                            # check if list_subscribers is a list if not convert it to a list
+                            if not isinstance(list_subscribers, list):
+                                list_subscribers = [list_subscribers]
+                            if len(list_subscribers) == 0:
+                                print(f"{Fore.MAGENTA}No Subscribers Found for the List...{Fore.WHITE}")
+                                cursor = None
+                                continue
+                            for subscriber in list_subscribers:
+                                subscriber_id = subscriber.get("rest_id", None)
+                                if subscriber_id is not None:
+                                    found_subscribers.append(subscriber["rest_id"])
+                            found_subscribers = await app.get_user_info(found_subscribers)
+                        except Exception as e:
+                            print(f"{Fore.RED}Failed to Fetch List Subscribers for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                            if debug:
+                                # loop through the traceback and print all the lines
+                                print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                                exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                                # Format the traceback
+                                traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                                # Print the formatted traceback
+                                print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                                for line in traceback_details:
+                                    print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+                            if "Rate limit exceeded" in str(e):
+                                exit()
+                            continue
+                        if len(found_subscribers) == 0:
+                            print(f"{Fore.MAGENTA}No Subscribers Found for the List...{Fore.WHITE}")
+                            cursor = None
+                            continue
+                        for subscriber in found_subscribers:
+                            if subscriber != None:
+                                data_tweet["list_details"][-1]["subscribers"].append({
+                                    "username": subscriber.get("username", None),
+                                    "display": subscriber.get("name", None),
+                                    "verified": subscriber.get("verified", None),
+                                    "protected": subscriber.get("protected", None),
+                                    "parody": subscriber.get("is_parody_account", None),
+                                    "commentary": subscriber.get("is_commentary_account", None),
+                                    "fan": subscriber.get("is_fan_account", None),
+                                    "automated": subscriber.get("is_automated", None)
+                                })
+                else:
+                    print(f"{Fore.RED}No List Details Found for the Tweet...{Fore.WHITE}")
+                    del data_tweet["list_details"]
+            else:
+                print(f"{Fore.RED}No List Details Found for the Tweet...{Fore.WHITE}")
+                del data_tweet["list_details"]
+    
     if subtweet == False:
         # Saves the file in the folder in scraped/USER/media/TWEET_ID/TWEET_ID.json
         f = open(path_name + "media" + os.sep + tweet.id + os.sep + tweet.id + ".json", "w")
@@ -1066,7 +1128,41 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
     return data_tweet
 
 
+def find_objects(obj, key, value, recursive=True, none_value=None):
+    results = []
 
+    def find_matching_objects(_obj, _key, _value):
+        if isinstance(_obj, dict):
+            if _key in _obj:
+                found = False
+                if _value is None:
+                    found = True
+                    results.append(_obj[_key])
+                elif (isinstance(_value, list) and _obj[_key] in _value) or _obj[_key] == _value:
+                    found = True
+                    results.append(_obj)
+
+                if not recursive and found:
+                    return results[0]
+
+            for sub_obj in _obj.values():
+                find_matching_objects(sub_obj, _key, _value)
+        elif isinstance(_obj, list):
+            for item in _obj:
+                find_matching_objects(item, _key, _value)
+
+    find_matching_objects(obj, key, value)
+
+    if len(results) == 1:
+        return results[0]
+
+    if len(results) == 0:
+        return none_value
+
+    if not recursive:
+        return results[0]
+
+    return results
 
 # function used to fetch the target username of who isbeing scraped
 async def fetch_username():
