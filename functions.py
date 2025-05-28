@@ -964,23 +964,124 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
     if cfg["GrabCommunity"] == True:
         
-       """
-        Work in progress, this will be used to fetch community data from tweets.
-        currently any tweets that are in community are broken
-       """
-        
-        # if "community_details" in json.dumps(tweet._raw):
-        #     print("Comunity_details detected in tweet._raw, fetching community data...")
-        #     data_tweet["community"] = {}
-        #     comunity_data = ""
-        #     if "content" in tweet._raw:
-        #         comunity_data = tweet._raw["content"]["itemContent"]["tweet_results"]["result"]["card"]["legacy"]["binding_values"][0]["value"]["string_value"]
-        #     else:
-        #         comunity_data = tweet._raw["item"]["itemContent"]["tweet_results"]["result"]["card"]["legacy"]["binding_values"][0]["value"]["string_value"]
-        #     comunity_data = json.loads(comunity_data.replace('\"', '"').replace("\\'", "'").replace("\\\\", "\\"))
-        #     print(json.dumps(comunity_data, indent=4))
-        #     print(f"{Fore.MAGENTA}Community Detected and fetching...")
+        if "community_details" in json.dumps(tweet._raw):
+            print("Comunity_details detected in tweet._raw, fetching community data...")
+            data_tweet["community"] = {}
+            comunity_data = find_objects(tweet._raw, "key", "unified_card", none_value={})
+            comunity_data = comunity_data.get("value", {}).get("string_value", None)
+            if comunity_data != None:
+                comunity_data = json.loads(comunity_data.replace('\"', '"').replace("\\'", "'").replace("\\\\", "\\"))
+                comunity_id = find_objects(comunity_data, "vanity", "twitter.com", none_value={}).get("url", None)
+                if comunity_id != None:
+                    comunity_id = comunity_id.split("/")[-1]
+                    community = await app.get_community(comunity_id)
+                    data_tweet["community"]["id"] = community.id
+                    data_tweet["community"]["name"] = community.name
+                    data_tweet["community"]["description"] = community.description
+                    data_tweet["community"]["member_count"] = community.member_count
+                    data_tweet["community"]["moderator_count"] = community.moderator_count
+                    data_tweet["community"]["created_at"] = str(community.created_at)
+                    data_tweet["community"]["admins"] = []
+                    data_tweet["community"]["creators"] = []
+                    data_tweet["community"]["moderators"] = []
+                    data_tweet["community"]["members"] = []
+                    data_tweet["community"]["rules"] = community.rules
 
+
+                cursor = ""
+                print(f"{Fore.MAGENTA}Fetching Community Members...{Fore.WHITE}")
+                while cursor != None:
+                    community_members = []
+                    community_members_role = {}
+                    if cursor == "":
+                        cursor = None
+                    try:
+                        community_response = await app.http.get_community_members_slice(app.http, comunity_id, cursor=cursor)
+                        cursor = find_objects(community_response, "__typename", "Community", none_value={}).get("members_slice", {}).get("slice_info", {}).get("next_cursor", None)
+                        
+                        users = find_objects(community_response, "__typename", "User", none_value=[])
+                        if not isinstance(users, list):
+                            users = [users]
+                        if users != []:
+                            for user in users:
+                                user_id = user.get("rest_id", None)
+                                if user_id is not None:
+                                    community_members.append(user_id)
+                                    community_members_role[user_id]= user['community_role']
+                        community_members = await app.get_user_info(community_members)
+
+                    except Exception as e:
+                        print(f"{Fore.RED}Failed to Fetch Community Members for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                        if debug:
+                            # loop through the traceback and print all the lines
+                            print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+                            exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                            # Format the traceback
+                            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+                            # Print the formatted traceback
+                            print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+                            for line in traceback_details:
+                                print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+                        if "Rate limit exceeded" in str(e):
+                            exit()
+                        continue
+                    if len(community_members) == 0:
+                        print(f"{Fore.MAGENTA}No Members Found for the Community...{Fore.WHITE}")
+                        cursor = None
+                        continue
+                    for member in community_members:
+                        role = community_members_role.get(member.id, "Member")
+                        match role.lower():
+                            case "admin":
+                                data_tweet["community"]["admins"].append({
+                                    "role": role,
+                                    "username": member.username,
+                                    "display": member.name,
+                                    "verified": member.verified,
+                                    "protected": member.protected,
+                                    "parody": member.is_parody_account,
+                                    "commentary": member.is_commentary_account,
+                                    "fan": member.is_fan_account,
+                                    "automated": member.is_automated
+                                })
+                            case "creator":
+                                data_tweet["community"]["creators"].append({
+                                    "role": role,
+                                    "username": member.username,
+                                    "display": member.name,
+                                    "verified": member.verified,
+                                    "protected": member.protected,
+                                    "parody": member.is_parody_account,
+                                    "commentary": member.is_commentary_account,
+                                    "fan": member.is_fan_account,
+                                    "automated": member.is_automated
+                                })
+                            case "moderator":
+                                data_tweet["community"]["moderators"].append({
+                                    "role": role,
+                                    "username": member.username,
+                                    "display": member.name,
+                                    "verified": member.verified,
+                                    "protected": member.protected,
+                                    "parody": member.is_parody_account,
+                                    "commentary": member.is_commentary_account,
+                                    "fan": member.is_fan_account,
+                                    "automated": member.is_automated
+                                })
+                            case _:
+                                data_tweet["community"]["members"].append({
+                                    "role": role,
+                                    "username": member.username,
+                                    "display": member.name,
+                                    "verified": member.verified,
+                                    "protected": member.protected,
+                                    "parody": member.is_parody_account,
+                                    "commentary": member.is_commentary_account,
+                                    "fan": member.is_fan_account,
+                                    "automated": member.is_automated
+                                })
     if cfg["GrabLists"] == True:
         if "list_details" in json.dumps(tweet._raw):
             print(f"{Fore.MAGENTA}List Details Detected and fetching...{Fore.WHITE}")
