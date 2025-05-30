@@ -1184,7 +1184,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                                 exit()
                             continue
                         if len(list_subscribers) == 0:
-                            print(f"{Fore.MAGENTA}No Users Found for the List...{Fore.WHITE}")
+                            print(f"{Fore.MAGENTA}No Subscribers Found for the List...{Fore.WHITE}")
                             cursor = None
                             continue
                         for user in list_subscribers:
