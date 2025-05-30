@@ -1167,7 +1167,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             list_subscribers = await app.get_list_followers(list_id, cursor=cursor)
                             cursor = list_subscribers.cursor
                         except Exception as e:
-                            print(f"{Fore.RED}Failed to Fetch List Users for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                            print(f"{Fore.RED}Failed to Fetch List Subscribers for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                             if debug:
                                 # loop through the traceback and print all the lines
                                 print(f"{Fore.RED}Traceback:{Fore.WHITE}")
