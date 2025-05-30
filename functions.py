@@ -1164,24 +1164,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         if cursor == "":
                             cursor = None
                         try:
-                            list_subscribers = await app.http.get_list_subscribers(app.http, list_id, cursor=cursor)
-                            cursor =  find_objects(list_subscribers, "cursorType", "Bottom", none_value={}).get("value", None)
-                            list_subscribers = find_objects(list_subscribers, "__typename", "User", none_value=[])
-                            # filter out anything but rest_id
-                            # check if list_subscribers is a list if not convert it to a list
-                            if not isinstance(list_subscribers, list):
-                                list_subscribers = [list_subscribers]
-                            if len(list_subscribers) == 0:
-                                print(f"{Fore.MAGENTA}No Subscribers Found for the List...{Fore.WHITE}")
-                                cursor = None
-                                continue
-                            for subscriber in list_subscribers:
-                                subscriber_id = subscriber.get("rest_id", None)
-                                if subscriber_id is not None:
-                                    found_subscribers.append(subscriber["rest_id"])
-                            found_subscribers = await app.get_user_info(found_subscribers)
+                            list_subscribers = await app.get_list_followers(list_id, cursor=cursor)
+                            cursor = list_subscribers.cursor
                         except Exception as e:
-                            print(f"{Fore.RED}Failed to Fetch List Subscribers for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+                            print(f"{Fore.RED}Failed to Fetch List Users for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                             if debug:
                                 # loop through the traceback and print all the lines
                                 print(f"{Fore.RED}Traceback:{Fore.WHITE}")
@@ -1197,22 +1183,21 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             if "Rate limit exceeded" in str(e):
                                 exit()
                             continue
-                        if len(found_subscribers) == 0:
-                            print(f"{Fore.MAGENTA}No Subscribers Found for the List...{Fore.WHITE}")
+                        if len(list_subscribers) == 0:
+                            print(f"{Fore.MAGENTA}No Users Found for the List...{Fore.WHITE}")
                             cursor = None
                             continue
-                        for subscriber in found_subscribers:
-                            if subscriber != None:
-                                data_tweet["list_details"][-1]["subscribers"].append({
-                                    "username": subscriber.get("username", None),
-                                    "display": subscriber.get("name", None),
-                                    "verified": subscriber.get("verified", None),
-                                    "protected": subscriber.get("protected", None),
-                                    "parody": subscriber.get("is_parody_account", None),
-                                    "commentary": subscriber.get("is_commentary_account", None),
-                                    "fan": subscriber.get("is_fan_account", None),
-                                    "automated": subscriber.get("is_automated", None)
-                                })
+                        for user in list_subscribers:
+                            data_tweet["list_details"][-1]["subscribers"].append({
+                                "username": user.username,
+                                "display": user.name,
+                                "verified": user.verified,
+                                "protected": user.protected,
+                                "parody": user.is_parody_account,
+                                "commentary": user.is_commentary_account,
+                                "fan": user.is_fan_account,
+                                "automated": user.is_automated
+                            })
                 else:
                     print(f"{Fore.RED}No List Details Found for the Tweet...{Fore.WHITE}")
                     del data_tweet["list_details"]
