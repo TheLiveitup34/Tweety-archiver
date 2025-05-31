@@ -1,6 +1,9 @@
-Automated Wiki Page for [Tweety Archiver](https://deepwiki.com/TheLiveitup34/Tweety-archiver)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/TheLiveitup34/Tweety-archiver)
 # Tweety Archiver
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/TheLiveitup34/Tweety-archiver)
+
+Automated Wiki Page for [Tweety Archiver](https://deepwiki.com/TheLiveitup34/Tweety-archiver)
+
 
 A tool built on the github repo [Tweety](https://github.com/mahrtayyab/tweety) and is a requirment to run and operate this tool
 

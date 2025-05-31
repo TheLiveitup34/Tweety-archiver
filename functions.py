@@ -10,58 +10,10 @@ from colorama import Fore
 from configs import configurations
 from convert_utils import convert_aac_to_mp3, async_download_media, combine_ts_files_to_mp4
 
-
 # Defines Paths for the app to use for path traversial
 base_path = os.path.dirname(os.path.realpath(__file__)) + os.sep
 
 parsed_ids = []
-
-
-
-# This function does nothing but print a verbose information of the file being downloaded may have error displayed when running
-async def modify_download(file_name, file_size,downloaded_in_bites, verbose=True):
-    # check if the file size is Mb or Kb for the display
-    file_size_type = "B"
-    file_size_type_display = file_size
-    downloaded_in_bites_display = downloaded_in_bites
-    if file_size > 1024:
-        file_size_type = "Kb"
-        file_size_type_display = file_size // 1024
-        downloaded_in_bites_display = downloaded_in_bites // 1024
-    elif file_size > 1024 * 1024:
-        file_size = file_size // (1024 * 1024)
-        file_size_type_display = "Mb"
-        downloaded_in_bites_display = downloaded_in_bites // (1024 * 1024)
-    elif file_size > 1024 * 1024 * 1024:
-        file_size = file_size // (1024 * 1024 * 1024)
-        file_size_type_display = "Gb"
-        downloaded_in_bites_display = downloaded_in_bites // (1024 * 1024 * 1024)
-
-    if file_size == downloaded_in_bites:
-        print(f"{Fore.BLUE}Downloaded {Fore.YELLOW}{file_name} {Fore.MAGENTA}{file_size_type_display}{Fore.BLUE}{file_size_type}{Fore.BLUE} Successfully...{Fore.WHITE}\n")
-    else:
-        if verbose == True:
-            print(f"{Fore.BLUE}Downloading file {Fore.YELLOW}{file_name}  {Fore.MAGENTA}{downloaded_in_bites_display}{Fore.BLUE}{file_size_type}/{Fore.MAGENTA}{file_size_type_display}{Fore.BLUE}{file_size_type}{Fore.WHITE}")
-    return None
-
-async def download_media(media_url, modify_download, verbose=True):
-    # download in the current directory
-    file_name = os.path.basename(media_url)
-    file_name = os.path.join(os.getcwd(), file_name)
-    # download the file
-    try:
-        response = requests.get(media_url, stream=True)
-        file_size = int(response.headers.get('content-length', 0))
-        with open(file_name, 'wb') as file:
-            downloaded_in_bites = 0
-            for data in response.iter_content(chunk_size=1024):
-                file.write(data)
-                downloaded_in_bites += len(data)
-                await modify_download(os.path.basename(file_name), file_size, downloaded_in_bites, verbose)
-    except Exception as e:
-        print(f"{Fore.RED}Failed to download {Fore.YELLOW}{media_url} {Fore.RED}to {Fore.YELLOW}{file_name} {Fore.RED}due to {Fore.MAGENTA}{e}{Fore.WHITE}")
-        return None
-    return os.path.basename(file_name)
 
 
 # This funciton modifies the tweet and fetches new tweets recursivly
@@ -129,39 +81,10 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         print(f"{Fore.MAGENTA}Found Taged users in Tweet...{Fore.WHITE}")
         data_tweet["media_tags"] = tweet.media[0].tagged_users
     
-    afiliate_label = find_objects(tweet._raw, "userLabelDisplayType", "Badge", none_value={})
+    await check_afiliate_and_community(tweet, data_tweet, path_name, current_id, cfg, debug)
 
-    if afiliate_label != {}:
-        # check if afiliate_label is a list or a dict
-        if isinstance(afiliate_label, list):
-            afiliate_label = afiliate_label[0]
-        print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
-        print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
-        data_tweet["affiliate"] = {
-            "url": afiliate_label["url"]["url"],
-            "badge": afiliate_label["badge"]["url"],
-            "description": afiliate_label["description"],
-            "user_label_type": afiliate_label["userLabelType"],
-            "user_label_display_type": afiliate_label["userLabelDisplayType"]
-        }
 
-        if cfg["GrabMedia"] == True:
-            print(f"{Fore.MAGENTA}Downloading Affiliate Label Media...{Fore.WHITE}")
-            # download the media
-            file_name = await download_media(afiliate_label["badge"]["url"], modify_download)
-            shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
-            os.remove(base_path + file_name)
-            data_tweet["affiliate"]["badge_file_name"] = file_name
-    try:
-        if "community" in tweet.__dict__:
-            print(f"{Fore.MAGENTA}Found Community...{Fore.WHITE}")
-            data_tweet["community"] = tweet.community
-            data_tweet["community_role"] = tweet.author.community_role
-    except Exception as e:
-        print(f"{Fore.RED}Failed to Fetch Community Data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-        if "Rate limit exceeded" in str(e):
-            exit()
-
+    # Checks if the tweet has a community and fetches the community data
     if cfg["GrabArticles"] == True:
         if "article" in tweet.__dict__ and tweet.article != None:
             print(f"{Fore.MAGENTA}Found Article...{Fore.WHITE}")
@@ -173,20 +96,31 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             data_tweet["article"]["cover_media"] = {}
             data_tweet["article"]["cover_media"]["alt_text"] = tweet.article.cover_media.alt_text
             print(f"{Fore.MAGENTA}Downloading Article Cover Media...{Fore.WHITE}")
+            
             if "url" in tweet.article.cover_media.__dict__:
                 data_tweet["article"]["cover_media"]["url"] = tweet.article.cover_media.url
                 data_tweet["article"]["cover_media"]["width"] = tweet.article.cover_media.width
                 data_tweet["article"]["cover_media"]["height"] = tweet.article.cover_media.height
             else:
-                best_stream = await tweet.article.cover_media.best_stream()
-                data_tweet["article"]["cover_media"]["url"] = best_stream.url
-                data_tweet["article"]["cover_media"]["content_type"] = best_stream.content_type.lower()
+                best_stream = None
+                try:
+                    best_stream = await tweet.article.cover_media.best_stream()
+                    data_tweet["article"]["cover_media"]["url"] = best_stream.url
+                    data_tweet["article"]["cover_media"]["content_type"] = best_stream.content_type.lower()
+                except Exception as e:
+                    log_exception(e, "Fetching Best Stream for Article Cover Media", debug)
+        
+            if best_stream is not None:
+                # Attempts to download the article cover media
+                try:
+                    file_name = await download_media(data_tweet["article"]["cover_media"]["url"], modify_download)
+                    shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
+                    os.remove(base_path + file_name)
+                    data_tweet["article"]["cover_media"]["file_name"] = file_name
+                except Exception as e:
+                   log_exception(e, "Downloading Article Cover Media", debug)
 
-            file_name = await download_media(data_tweet["article"]["cover_media"]["url"], modify_download)
-            shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
-            os.remove(base_path + file_name)
-
-            data_tweet["article"]["cover_media"]["file_name"] = file_name
+            # downloads the article media in the article
             if len(tweet.article.media) > 0:
                 print(f"{Fore.MAGENTA}Found Article Media...{Fore.WHITE}")
                 data_tweet["article"]["media"] = []
@@ -195,26 +129,35 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     if "url" in media.__dict__:
                         data_url = media.url
                     else:
-                        best_stream = await media.best_stream()
-                        data_url = best_stream.url
-                    file_name = await download_media(data_url, modify_download)
-                    shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
-                    os.remove(base_path + file_name)
-                    if "url" in media.__dict__:
-                        data_tweet["article"]["media"].append({
-                            "url": media.url,
-                            "alt_text": media.alt_text,
-                            "width": media.width,
-                            "height": media.height,
-                            "file_name": file_name
-                        })
-                    else:
-                        data_tweet["article"]["media"].append({
-                            "url": best_stream.url,
-                            "content_type": best_stream.content_type.lower(),
-                            "alt_text": media.alt_text,
-                            "file_name": file_name
-                        })
+                        best_stream = None
+                        try:
+                            best_stream = await media.best_stream()
+                            data_url = best_stream.url
+                        except Exception as e:
+                           log_exception(e, "Fetching Best Stream for Article Media", debug)
+
+                    if best_stream is not None:
+                        try:
+                            file_name = await download_media(data_url, modify_download)
+                            shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
+                            os.remove(base_path + file_name)
+                            if "url" in media.__dict__:
+                                data_tweet["article"]["media"].append({
+                                    "url": media.url,
+                                    "alt_text": media.alt_text,
+                                    "width": media.width,
+                                    "height": media.height,
+                                    "file_name": file_name
+                                })
+                            else:
+                                data_tweet["article"]["media"].append({
+                                    "url": best_stream.url,
+                                    "content_type": best_stream.content_type.lower(),
+                                    "alt_text": media.alt_text,
+                                    "file_name": file_name
+                                })
+                        except Exception as e:
+                            log_exception(e, "Downloading Article Media", debug)
 
     if cfg["ConvertLinks"] == True:
         print(f"{Fore.MAGENTA}Converting Twitter Shortner Links to Original Links...{Fore.WHITE}")
@@ -244,20 +187,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 res = requests.get(url, allow_redirects=False, timeout=5)
                 actual_url = res.next.url
             except Exception as e:
-                error = str(e)
-                print(f"{Fore.RED}Failed to reach domain. Error: {error}")
-                if debug:
-                    # loop through the traceback and print all the lines
-                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                    # Format the traceback
-                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                    # Print the formatted traceback
-                    print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                    for line in traceback_details:
-                        print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+                log_exception(e, "Fetching Original URL from Twitter Shortner", debug)
+            
             if actual_url == None:
                 continue
         
@@ -273,14 +204,19 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
         if len(tweet.media) > 0:
             print(f"\n{Fore.MAGENTA}Found and Downloading All Media...{Fore.WHITE}")
             for media in tweet.media:
-                file_name = await media.download(None, modify_download)
-                shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
-                os.remove(base_path + file_name)
-                data_tweet["media"].append({
-                    "url": media.url,
-                    "alt_text": media.alt_text,
-                    "file_name": file_name,
-                })
+                try:
+                    file_name = await media.download(None, modify_download)
+                    shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
+                    os.remove(base_path + file_name)
+                    data_tweet["media"].append({
+                        "url": media.url,
+                        "alt_text": media.alt_text,
+                        "file_name": file_name,
+                    })
+                except Exception as e:
+                    log_exception(e, "Downloading Media", debug)
+                
+                
                 if "sensitive_media_warning" in media._raw:
                     print(f"{Fore.MAGENTA}Found Sensitive Media Warning...{Fore.WHITE}")
                     data_tweet["media"][-1]["sensitive_warning"] = []
@@ -290,6 +226,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             "type": warning,
                             "is_sensitive": media._raw["sensitive_media_warning"][warning]
                         })
+
                 if "source_user" in media.__dict__ and media.source_user != None:
                     print(f"{Fore.MAGENTA}Found Source User in Media...{Fore.WHITE}")
                     data_tweet["media"][-1]["source_user"] = []
@@ -299,27 +236,14 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "verified": media.source_user.verified
                     })
                     data_tweet["media"][-1]["source_user_tweet"] = []
-                    sourceusertweetid = media._raw["source_status_id_str"]
-                    try:
-                        sourceusertweetdetails = await app.tweet_detail(sourceusertweetid)
-                        sourceusertweet = await modify_tweet(sourceusertweetdetails, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
-                        data_tweet["media"][-1]["source_user_tweet"].append(sourceusertweet)
-                    except Exception as e:
-                        print(f"{Fore.RED}Failed to Fetch Source User Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                        if debug:
-                            # loop through the traceback and print all the lines
-                            print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                            exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                            # Format the traceback
-                            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                            # Print the formatted traceback
-                            print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                            for line in traceback_details:
-                                print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                        if "Rate limit exceeded" in str(e):
-                            exit()
+                    sourceusertweetid = media._raw.get("source_status_id_str", None)
+                    if sourceusertweetid != None:
+                        try:
+                            sourceusertweetdetails = await app.tweet_detail(sourceusertweetid)
+                            sourceusertweet = await modify_tweet(sourceusertweetdetails, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
+                            data_tweet["media"][-1]["source_user_tweet"].append(sourceusertweet)
+                        except Exception as e:
+                           log_exception(e, "Fetching Source User Tweet", debug)
             
     # Checks if tweet is Quoting another tweet and tries to download the tweet it quoted
     if cfg["GrabTweetQuoted"] == True:
@@ -331,21 +255,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     data_tweet["quoted_tweet"] = await modify_tweet(tweet.quoted_tweet, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
                     data_tweet["quoted_tweet_id"] = tweet.quoted_tweet.id
                 except Exception as e:
-                    print(f"{Fore.RED}Failed to Modify Quoted Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                    if debug:
-                        # loop through the traceback and print all the lines
-                        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                        # Format the traceback
-                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                        # Print the formatted traceback
-                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                        for line in traceback_details:
-                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                    if "Rate limit exceeded" in str(e):
-                        exit()
+                    log_exception(e, "Fetching Quoted Tweet", debug)
             else:
                 print(f"{Fore.RED}Failed to Fetch Quote Tweet due to Quoted Tweet Provided in None Value{Fore.WHITE}")
 
@@ -361,26 +271,13 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 if quoted_cursor == "":
                     quoted_cursor = None
 
-
                 try:
                     quotes = await app.tweet_detail_quotes(tweet, cursor=quoted_cursor)
                     quoted_cursor = quotes.cursor
                 except Exception as e:
-                    print(f"{Fore.RED}Failed to Fetch Quoted Tweets of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                    if debug:
-                        # loop through the traceback and print all the lines
-                        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
+                    log_exception(e, "Fetching Quoted Tweets", debug)
+                
 
-                        # Format the traceback
-                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                        # Print the formatted traceback
-                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                        for line in traceback_details:
-                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                    if "Rate limit exceeded" in str(e):
-                        exit()
                 if quotes == None:
                     quoted_cursor = None
                     continue
@@ -406,66 +303,18 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         retweets = await app.tweet_detail_retweets(tweet, cursor=retweets_cursor)
                         retweets_cursor = retweets.cursor
                     except Exception as e:
-                        print(f"{Fore.RED}Failed to Fetch Retweet User List of the main tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                        if debug:
-                            # loop through the traceback and print all the lines
-                            print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                            exc_type, exc_value, exc_traceback = sys.exc_info()
+                        log_exception(e, "Fetching Retweet Users", debug)
+                    
 
-                            # Format the traceback
-                            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                            # Print the formatted traceback
-                            print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                            for line in traceback_details:
-                                print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                        if "Rate limit exceeded" in str(e):
-                            exit()
                     if len(retweets) == 0:
                         retweets_cursor = None
                         continue
                     for retweet in retweets:
                         print(f"{Fore.MAGENTA}Found Retweet User: {Fore.YELLOW}{retweet.username}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
-                        data_tweet["retweet_users"].append({
-                            "username": retweet.username,
-                            "display": retweet.name,
-                            "verified": retweet.verified,
-                            "protected": retweet.protected,
-                            "parody": retweet.is_parody_account,
-                            "commentary": retweet.is_commentary_account,
-                            "fan": retweet.is_fan_account,
-                            "automated": retweet.is_automated
-                        })
+                        data_tweet["retweet_users"].append(grab_user_data(retweet))
 
-                            
-                        afiliate_label = find_objects(tweet._raw, "userLabelDisplayType", "Badge", none_value={})
+                        await check_afiliate_and_community(retweet, data_tweet["retweet_users"][-1], path_name, current_id, cfg, debug)
 
-                        if afiliate_label != {}:
-                            # check if afiliate_label is a list or a dict
-                            if isinstance(afiliate_label, list):
-                                afiliate_label = afiliate_label[0]
-                            print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
-                            print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
-                            data_tweet["retweet_users"][-1]["affiliate"] = {
-                                "url": afiliate_label["url"]["url"],
-                                "badge": afiliate_label["badge"]["url"],
-                                "description": afiliate_label["description"],
-                                "user_label_type": afiliate_label["userLabelType"],
-                                "user_label_display_type": afiliate_label["userLabelDisplayType"]
-                            }
-
-                            if cfg["GrabMedia"] == True:
-                                print(f"{Fore.MAGENTA}Downloading Affiliate Label Media...{Fore.WHITE}")
-                                # download the media
-                                file_name = await download_media(afiliate_label["badge"]["url"], modify_download)
-                                shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
-                                os.remove(base_path + file_name)
-                                data_tweet["retweet_users"][-1]["affiliate"]["badge_file_name"] = file_name
-
-                        if "community" in retweet.__dict__:
-                            print(f"{Fore.MAGENTA}Found Community...{Fore.WHITE}")
-                            data_tweet["retweet_users"][-1]["community"] = retweet.community
-                            data_tweet["retweet_users"][-1]["community_role"] = retweet.community_role
 
     if cfg["GrabRepliedToTweet"] == True:
         # Checks if tweet is a reply and tries to download the tweet it replied to
@@ -476,21 +325,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 data_tweet["replied_to_tweet"] = await modify_tweet(replied_to, True, parent_id=parent_id,path_name=path_name, app=app, debug=debug)
                 data_tweet["replied_to_id"] = replied_to.id
             except Exception as e:
-                print(f"{Fore.RED}Failed to Modify Reply Tweet for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                if debug:
-                    # loop through the traceback and print all the lines
-                        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                        # Format the traceback
-                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                        # Print the formatted traceback
-                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                        for line in traceback_details:
-                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                if "Rate limit exceeded" in str(e):
-                    exit()
+                log_exception(e, "Fetching Replied To Tweet", debug)
 
     if cfg["GrabPolls"] == True:
     # Checks if tweet Poll exists in tweet
@@ -531,61 +366,96 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 print(f"\n{Fore.MAGENTA}Attempting to fetch comments...{Fore.WHITE}")
             else:
                 print(f"\n{Fore.MAGENTA}Attempting to fetch comments for subtweet id: {Fore.YELLOW}{current_id}{Fore.MAGENTA}...{Fore.WHITE}")
+            cursor_label = ""
+            tombstone_types = {}
             while comment_cursor != None:
                 if comment_cursor == "":
                     comment_cursor = None
             
                 try:
-                    if cfg["GrabHiddenReplies"] == True: 
-                        comments = await tweet.get_comments(cursor=comment_cursor, get_hidden=True) #Note for Liv, if possible, can we put hidden replies in it's own section?
-                    else:
-                        comments = await tweet.get_comments(cursor=comment_cursor)
-                    comment_cursor = comments.cursor
+                    comments = await app.http.get_tweet_detail(tweet.id, comment_cursor)
+                    if "discover more" in json.dumps(comments).lower():
+                        comment_cursor = None
+                        print(f"{Fore.MAGENTA}Discover More Detected in Comments, Skipping...{Fore.WHITE}")
+                        continue
+                    cursor_object = find_objects(comments, "__typename", "TimelineTimelineCursor", False, none_value={})
+                    comment_cursor = cursor_object.get("value", None)
+                    comments_object = find_objects(comments, "__typename", "TimelineTimelineModule", none_value=[])
+
+
+
+                    comments = find_objects(comments_object, "__typename", "Tweet", none_value=[])
+                    comments_temp = []
+                    if comments != []:
+                        for comment in comments:
+                            if isinstance(comment, str):
+                                print(f"{Fore.RED}Found a String Object in Comments, Skipping...{Fore.WHITE}")
+                                if debug:
+                                    print(f"{Fore.RED}Comment Object: {Fore.YELLOW}{comment}{Fore.WHITE}")
+                                continue
+                            comment_id = comment.get("rest_id", None)
+                            source_text = comment.get("source", None)
+                            if source_text != None and "Advertise" in source_text:      
+                                print(f"{Fore.MAGENTA}Skipping Advertisement Comment...{Fore.WHITE}")
+                                continue
+                            if comment_id != None:
+                                comments_temp.append(await app.tweet_detail(comment_id))
+                    comments = comments_temp
+                    del comments_temp
+
                 except Exception as e:
-                    print(f"{Fore.RED}Attempt to Fetch comments failed for the following Reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                    if debug:
-                        # loop through the traceback and print all the lines
-                        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                        # Format the traceback
-                        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                        # Print the formatted traceback
-                        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                        for line in traceback_details:
-                            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                    if "Rate limit exceeded" in str(e):
-                        exit()
+                    log_exception(e, "Fetching Comments", debug)
                     continue
-                if len(comments) == 0:
+
+
+                if len(comments) == 0 and comment_cursor == None:
                     print(f"{Fore.MAGENTA}No Comments Found for the Tweet...{Fore.WHITE}")
                     comment_cursor = None
                     continue
+
                 for comment in comments:
-                    for tweetComment in comment.tweets:
-                        try:
-                            tweet_comment_data = await modify_tweet(tweetComment, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
-                            print(f"{Fore.MAGENTA}Found Comment id: {Fore.YELLOW}{tweetComment.id}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
-                            if tweet_comment_data != None:
-                                data_tweet["comments"].append(tweet_comment_data)
-                        except Exception as e:
-                            print(f"{Fore.RED}Failed to Scrape Comment or data for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                            if debug:
-                                # loop through the traceback and print all the lines
-                                print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                                exc_type, exc_value, exc_traceback = sys.exc_info()
+                    try:
+                        tweet_comment_data = await modify_tweet(comment, True, parent_id=parent_id, path_name=path_name, app=app, debug=debug)
+                        print(f"{Fore.MAGENTA}Found Comment id: {Fore.YELLOW}{comment.id}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
+                        if tweet_comment_data != None:
+                            match cursor_label:
+                                case "offensive_content":
+                                    # chec if a list of offensive_comments exists
+                                    if "offensive_comments" not in data_tweet:
+                                        data_tweet["offensive_comments"] = []
+                                    data_tweet["offensive_comments"].append(tweet_comment_data)
+                                case "spam_content":
+                                    # chec if a list of spam_comments exists
+                                    if "spam_comments" not in data_tweet:
+                                        data_tweet["spam_comments"] = []
+                                    data_tweet["spam_comments"].append(tweet_comment_data)
+                                case "sensitive_content":
+                                    # chec if a list of sensitive_comments exists
+                                    if "sensitive_comments" not in data_tweet:
+                                        data_tweet["sensitive_comments"] = []
+                                    data_tweet["sensitive_comments"].append(tweet_comment_data)
+                                case _:
+                                    data_tweet["comments"].append(tweet_comment_data)
+                    except Exception as e:
+                       log_exception(e, "Formatting Comment Data", debug)
 
-                                # Format the traceback
-                                traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+                
+                cursor_label = cursor_object.get('displayTreatment', {}).get('labelText', None)
+                if cursor_label == None:
+                    cursor_label = cursor_object.get('displayTreatment', {}).get('actionText', None)
+                if cursor_label == None:
+                    cursor_label = ""
+                if type(cursor_label) == str:
+                    cursor_label = cursor_label
+                if "offensive content" in cursor_label:
+                    cursor_label = "offensive_content"
+                elif "spam" in cursor_label:
+                    cursor_label = "spam_content"
+                elif "sensitive" in cursor_label:
+                    cursor_label = "sensitive_content"
+                else:
+                    cursor_label = ""
 
-                                # Print the formatted traceback
-                                print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                                for line in traceback_details:
-                                    print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                            if "Rate limit exceeded" in str(e):
-                                exit()
-            
     if cfg["GrabEditHistory"] == True:   
         if tweet.edit_control != None:
             if len(tweet.edit_control.tweet_ids) > 1:
@@ -599,22 +469,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         if edithistory != None:
                             data_tweet["edit_history"].append(edithistory)
                     except Exception as e:
-                        print(f"{Fore.RED}Failed to Scrape Edit History for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                        if debug:
-                            # loop through the traceback and print all the lines
-                            print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                            exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                            # Format the traceback
-                            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                            # Print the formatted traceback
-                            print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                            for line in traceback_details:
-                                print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                     
-                        if "Rate limit exceeded" in str(e):
-                            exit()
+                       log_exception(e, "Formatting Edit History Data", debug)
     
     if cfg["GrabAudioSpace"] == True:
 
@@ -647,8 +502,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 if not os.path.exists(chunks_dir):
                     os.makedirs(chunks_dir)
 
-
                 result = await async_download_media(media_url=chunk_url, files=chunk_files, output_path=chunks_dir, max_concurrent=15)
+       
                 if result == None:
                     print(f"{Fore.RED}Failed to download audio chunks{Fore.WHITE}")
                     raise Exception("Failed to download audio chunks")
@@ -677,25 +532,12 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
                 print(f"{Fore.MAGENTA}Cleaned up chunck donloads and grabing data.{Fore.WHITE}")
             except Exception as e:
-                print(f"{Fore.RED}Failed to Scrape Audio Spaces for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                if debug:
-                    # loop through the traceback and print all the lines
-                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                log_exception(e, "Fetching Audio Space Data", debug)
 
-                    # Format the traceback
-                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                    # Print the formatted traceback
-                    print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                    for line in traceback_details:
-                        print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                if "Rate limit exceeded" in str(e):
-                    print(f"{Fore.RED}Rate limit exceeded...{Fore.WHITE}")
-                    exit()
             if audiosound != None:
                 if audiosound_download == False:
                     print(f"{Fore.RED}WARNING: {Fore.CYAN}Audio Space may not be available this may be the reason for the error.. check the original audio space if this is the case.{Fore.WHITE}")
+                
                 data_tweet["audio_space"].append({
                     "id": audiosound.id,
                     "title": audiosound.title,
@@ -718,9 +560,11 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     "admins": [],
                     "speakers": [], 
                 })
+                
                 if audiosound_download == True:
                     data_tweet["audio_space"][-1]["file_name"] = f"{audiosound.id}.mp3"
 
+                # user object is to periscope
                 for admin in audiosound.admins:
                     data_tweet["audio_space"][-1]["admins"].append({
                         "twitter_screen_name": admin.twitter_screen_name,
@@ -728,6 +572,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "display": admin.name,
                         "verified": admin.is_verified
                     })
+                # user object is to periscope
                 for speaker in audiosound.speakers:
                     data_tweet["audio_space"][-1]["speakers"].append({
                         "twitter_screen_name": speaker.twitter_screen_name,
@@ -738,7 +583,6 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
 
     if cfg["GrabBroadcasts"] == True:
         if tweet.broadcast != None:
-
 
             print(f"{Fore.MAGENTA}Broadcast Detected and fetching...")
             data_tweet["broadcast"] = [] 
@@ -755,108 +599,122 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
             })
 
             print(f"{Fore.MAGENTA}Found Broadcast...{Fore.WHITE}")
-            broadcast = await tweet.broadcast.get_stream_link()
-            broadcast_id = broadcast.share_url.split("/")[-1]
+            try:
+                broadcast = await tweet.broadcast.get_stream_link()
+            except Exception as e:
+                log_exception(e, "Fetching Broadcast Stream Link", debug)
+                broadcast = None
 
-            broadcast_info = await app.http.get_broadcast_by_id(app.http, broadcast_id)
-            data_tweet["broadcast"][-1]["view_count"] = broadcast_info["data"]["broadcast"]["total_watched"]
-            data_tweet["broadcast"][-1]["live_count"] = broadcast_info["data"]["broadcast"]["total_watching"]
-            data_tweet["broadcast"][-1]["replay_count"] = broadcast_info["data"]["broadcast"]["total_watched"] - broadcast_info["data"]["broadcast"]["total_watching"]
+            if broadcast == None:
+                print(f"{Fore.RED}Failed to fetch broadcast stream link, skipping...{Fore.WHITE}")
 
-            base_url =  "https://" + broadcast.direct_url.split("/")[2]
-            resolutions = requests.get(broadcast.direct_url)
-            resolutions = resolutions.text
-            resolutions = resolutions.split("\n")
+            if broadcast is not None:
+                broadcast_id = broadcast.share_url.split("/")[-1]
 
-            resolution_links = {}
-            resolution_types = []
-            for i in range(len(resolutions)):
-                if "RESOLUTION" in resolutions[i]:
-                    resolution = resolutions[i].split("RESOLUTION")[1].split(",")[0][1:]
-                    resolution_links[resolution] = resolutions[i + 1]
-                    resolution_types.append(resolution)
-            broadcastResolutionValidation = True
-            if cfg["BroadcastsResolution"].lower() != "all" and cfg["BroadcastsResolution"].lower() not in resolution_types:
-                broadcastResolutionValidation = False
-                print(f"{Fore.RED}Invalid Resolution Type Provided: {Fore.YELLOW}{cfg['BroadcastsResolution']}{Fore.RED}...{Fore.WHITE}")
-                print(f"{Fore.RED}Valid Resolution Types are: {Fore.YELLOW}{Fore.WHITE}")
-                print(f"{Fore.YELLOW}  - all{Fore.WHITE}")
-                for res in resolution_types:
-                    print(f"{Fore.YELLOW}  - {res}{Fore.WHITE}")
-            
+                broadcast_info = await app.http.get_broadcast_by_id(app.http, broadcast_id)
+                data_tweet["broadcast"][-1]["view_count"] = broadcast_info["data"]["broadcast"]["total_watched"]
+                data_tweet["broadcast"][-1]["live_count"] = broadcast_info["data"]["broadcast"]["total_watching"]
+                data_tweet["broadcast"][-1]["replay_count"] = broadcast_info["data"]["broadcast"]["total_watched"] - broadcast_info["data"]["broadcast"]["total_watching"]
 
-            if cfg["BroadcastsResolution"].lower() != "all" and cfg["BroadcastsResolution"].lower() in resolution_types:
-                # remove all the other resolutions from the list
-                resolution_types = [cfg["BroadcastsResolution"].lower()]
+                base_url =  "https://" + broadcast.direct_url.split("/")[2]
+                resolutions = requests.get(broadcast.direct_url)
+                resolutions = resolutions.text
+                resolutions = resolutions.split("\n")
 
-            if broadcastResolutionValidation == True:
-                data_tweet["broadcast"][-1]["files"] = []
-                for res_type in resolution_types:
-                    # check if the video exists already
-                    print(f"{Fore.MAGENTA}Downloading Broadcast Video...{Fore.WHITE}")
-                    chunk_url = base_url + resolution_links[res_type]
-                    transcript = requests.get(chunk_url)
-                    # get the text from the transcript
-                    transcript_text = transcript.text
-                    # find all the chunck_*_a.aac files in the text
-                    chunk_files = re.findall("chunk_(.*)_a\.ts", transcript_text)
-                    # add chunc_ and _a.aac to the files
-                    
-                    chunk_files = [f"chunk_{file}_a.ts" for file in chunk_files]
+                resolution_links = {}
+                resolution_types = []
+                for i in range(len(resolutions)):
+                    if "RESOLUTION" in resolutions[i]:
+                        resolution = resolutions[i].split("RESOLUTION")[1].split(",")[0][1:]
+                        resolution_links[resolution] = resolutions[i + 1]
+                        resolution_types.append(resolution)
+                broadcastResolutionValidation = True
+                if cfg["BroadcastsResolution"].lower() != "all" and cfg["BroadcastsResolution"].lower() not in resolution_types:
+                    broadcastResolutionValidation = False
+                    print(f"{Fore.RED}Invalid Resolution Type Provided: {Fore.YELLOW}{cfg['BroadcastsResolution']}{Fore.RED}...{Fore.WHITE}")
+                    print(f"{Fore.RED}Valid Resolution Types are: {Fore.YELLOW}{Fore.WHITE}")
+                    print(f"{Fore.YELLOW}  - all{Fore.WHITE}")
+                    for res in resolution_types:
+                        print(f"{Fore.YELLOW}  - {res}{Fore.WHITE}")
+                
 
-                    chunk_url = chunk_url.replace(chunk_url.split("/")[-1], "")
+                if cfg["BroadcastsResolution"].lower() != "all" and cfg["BroadcastsResolution"].lower() in resolution_types:
+                    # remove all the other resolutions from the list
+                    resolution_types = [cfg["BroadcastsResolution"].lower()]
 
-                    chunks_dir = path_name + "media" + os.sep + current_id + os.sep + "chunks_download_" + res_type 
-                    if not os.path.exists(chunks_dir):
-                        if os.path.exists(path_name + "media" + os.sep + current_id + os.sep + f"{tweet.broadcast.id}_{res_type}.mp4"):
-                            print(f"{Fore.BLUE}Found Broadcast Video: {Fore.YELLOW}{tweet.broadcast.id}_{res_type}.mp4{Fore.BLUE}...{Fore.WHITE}")
+                if broadcastResolutionValidation == True:
+                    data_tweet["broadcast"][-1]["files"] = []
+
+                    for res_type in resolution_types:
+                        # check if the video exists already
+                        print(f"{Fore.MAGENTA}Downloading Broadcast Video...{Fore.WHITE}")
+                        chunk_url = base_url + resolution_links[res_type]
+                        transcript = requests.get(chunk_url)
+                        # get the text from the transcript
+                        transcript_text = transcript.text
+                        # find all the chunck_*_a.aac files in the text
+                        chunk_files = re.findall("chunk_(.*)_a\.ts", transcript_text)
+                        # add chunc_ and _a.aac to the files
+                        
+                        chunk_files = [f"chunk_{file}_a.ts" for file in chunk_files]
+
+                        chunk_url = chunk_url.replace(chunk_url.split("/")[-1], "")
+
+                        chunks_dir = path_name + "media" + os.sep + current_id + os.sep + "chunks_download_" + res_type 
+                        if not os.path.exists(chunks_dir):
+                            if os.path.exists(path_name + "media" + os.sep + current_id + os.sep + f"{tweet.broadcast.id}_{res_type}.mp4"):
+                                print(f"{Fore.BLUE}Found Broadcast Video: {Fore.YELLOW}{tweet.broadcast.id}_{res_type}.mp4{Fore.BLUE}...{Fore.WHITE}")
+                                data_tweet["broadcast"][-1]["files"].append({
+                                    "file_name": f"{tweet.broadcast.id}_{res_type}.mp4",
+                                    "resolution": res_type
+                                })
+                                continue
+                            os.makedirs(chunks_dir)
+                        else:
+                            # check how many files are in the folder
+                            files = os.listdir(chunks_dir)
+                            if len(files) != len(chunk_files):
+                                # clear the files in the folder to prevent corrupted files
+                                for file in files:
+                                    os.remove(chunks_dir + os.sep + file)
+                            if os.path.exists(path_name + "media" + os.sep + current_id + os.sep + f"{tweet.broadcast.id}_{res_type}.mp4"):
+                                # remove the video file 
+                                os.remove(path_name + "media" + os.sep + current_id + os.sep + f"{tweet.broadcast.id}_{res_type}.mp4")
+
+                        try:
+                            result = await async_download_media(media_url=chunk_url, files=chunk_files, output_path=chunks_dir, max_concurrent=15)
+                        except Exception as e:
+                            log_exception(e, "Downloading Broadcast Video Chunks", debug)
+                            result = False
+                        
+                        if result == True:
+                            print(f"{Fore.MAGENTA}Downloaded Broadcast Video...{Fore.WHITE}")
+                            # print(chunk_files)
+                            chunk_files = [f"{chunks_dir}{os.sep}{file}" for file in chunk_files]
+                            # convert the chunks to mp4
+                            print(f"{Fore.MAGENTA}Converting {Fore.YELLOW}{len(chunk_files)} {Fore.MAGENTA}chunks to mp4...{Fore.WHITE}")
+                            convert_success = combine_ts_files_to_mp4(
+                                chunk_files,
+                                f"{path_name}media{os.sep}{current_id}{os.sep}{tweet.broadcast.id}_{res_type}.mp4"
+                            )
+
+                            if convert_success == False:
+                                print(f"{Fore.RED}Failed to convert audio chunks to mp4{Fore.WHITE}")
+                            else:
+                                print(f"{Fore.MAGENTA}Converted {Fore.YELLOW}{len(chunk_files)} {Fore.MAGENTA}chunks to mp4...{Fore.WHITE}")
+                                # delete the chunks
+                                for chunk_file in chunk_files:
+                                    os.remove(chunk_file)
+                                # delete the chunks_download folder
+                                shutil.rmtree(path_name + "media" + os.sep + current_id + os.sep + f"chunks_download_{res_type}")
+                            del chunk_url
+                            del chunk_files
+                            del transcript
+                            del transcript_text
                             data_tweet["broadcast"][-1]["files"].append({
                                 "file_name": f"{tweet.broadcast.id}_{res_type}.mp4",
                                 "resolution": res_type
                             })
-                            continue
-                        os.makedirs(chunks_dir)
-                    else:
-                        # check how many files are in the folder
-                        files = os.listdir(chunks_dir)
-                        if len(files) != len(chunk_files):
-                            # clear the files in the folder to prevent corrupted files
-                            for file in files:
-                                os.remove(chunks_dir + os.sep + file)
-                        if os.path.exists(path_name + "media" + os.sep + current_id + os.sep + f"{tweet.broadcast.id}_{res_type}.mp4"):
-                            # remove the video file 
-                            os.remove(path_name + "media" + os.sep + current_id + os.sep + f"{tweet.broadcast.id}_{res_type}.mp4")
-                        
-                    result = await async_download_media(media_url=chunk_url, files=chunk_files, output_path=chunks_dir, max_concurrent=15)
-
-                    if result == True:
-                        print(f"{Fore.MAGENTA}Downloaded Broadcast Video...{Fore.WHITE}")
-                        # print(chunk_files)
-                        chunk_files = [f"{chunks_dir}{os.sep}{file}" for file in chunk_files]
-                        # convert the chunks to mp4
-                        print(f"{Fore.MAGENTA}Converting {Fore.YELLOW}{len(chunk_files)} {Fore.MAGENTA}chunks to mp4...{Fore.WHITE}")
-                        convert_success = combine_ts_files_to_mp4(
-                            chunk_files,
-                            f"{path_name}media{os.sep}{current_id}{os.sep}{tweet.broadcast.id}_{res_type}.mp4"
-                        )
-
-                        if convert_success == False:
-                            print(f"{Fore.RED}Failed to convert audio chunks to mp4{Fore.WHITE}")
-                        else:
-                            print(f"{Fore.MAGENTA}Converted {Fore.YELLOW}{len(chunk_files)} {Fore.MAGENTA}chunks to mp4...{Fore.WHITE}")
-                            # delete the chunks
-                            for chunk_file in chunk_files:
-                                os.remove(chunk_file)
-                            # delete the chunks_download folder
-                            shutil.rmtree(path_name + "media" + os.sep + current_id + os.sep + f"chunks_download_{res_type}")
-                        del chunk_url
-                        del chunk_files
-                        del transcript
-                        del transcript_text
-                        data_tweet["broadcast"][-1]["files"].append({
-                            "file_name": f"{tweet.broadcast.id}_{res_type}.mp4",
-                            "resolution": res_type
-                        })
                 
 
     if cfg["GrabGrok"] == True:
@@ -867,16 +725,19 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 "id": tweet.grok_share.id,
                 "messages": []
             }) 
+
+
             cursor = None
             try:
-                # grok_response = await app.http.get_grok_conversation_by_id(tweet.id, cursor=cursor)
                 grok_response = await app.http.get_grok_conversation_by_uid(app.http, tweet.grok_share.id, cursor=None)
                 messages = grok_response["data"]["grokShare"]["items"]
+
                 for message in messages:
                     data_tweet["grok_share"][-1]["messages"].append({
                         "message" : message["message"],
                         "sender": message["sender"]
                     })
+
                     if "file_attachments" in message:
                         data_tweet["grok_share"][-1]["messages"][-1]["file_attachments"] = []
                         for file in message["file_attachments"]:
@@ -890,6 +751,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                                 shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
                                 os.remove(base_path + file_name)
                                 data_tweet["grok_share"][-1]["messages"][-1]["file_attachments"][-1]["file_name"] = file_name
+                    
                     if "web_results" in message:
                         print(f"{Fore.MAGENTA}Found Web Results...{Fore.WHITE}")
                         data_tweet["grok_share"][-1]["messages"][-1]["web_results"] = []
@@ -902,6 +764,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                                 "favicon": web_result.get("favicon", None),
                                 "favicon_base64": web_result.get("favicon_base64", None)
                             })
+                    
                     if "cited_web_results" in message:
                         print(f"{Fore.MAGENTA}Found Cited Web Results...{Fore.WHITE}")
                         data_tweet["grok_share"][-1]["messages"][-1]["cited_web_results"] = []
@@ -914,9 +777,11 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                                 "favicon": cited_web_result.get("favicon", None),
                                 "favicon_base64": cited_web_result.get("favicon_base64", None)
                             })
+                    
                     if "post_ids_results" in message:
                         print(f"{Fore.MAGENTA}Found Grok Users refrenced...{Fore.WHITE}")
                         data_tweet["grok_share"][-1]["messages"][-1]["post_id_results"] = []
+
                         for post_id in message["post_ids_results"]:
                             try:
                                 post = await app.tweet_detail(post_id["result"]['rest_id'])
@@ -925,42 +790,11 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                                 if post_data != None:   
                                     data_tweet["grok_share"][-1]["messages"][-1]["post_id_results"].append(post_data)
                             except Exception as e:
-                                print(f"{Fore.RED}Failed to Scrape Grok Share Post for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                                if debug:
-                                    # loop through the traceback and print all the lines
-                                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                                    exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                                    # Format the traceback
-                                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                                    # Print the formatted traceback
-                                    print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                                    for line in traceback_details:
-                                        print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                                    
-                                if "Rate limit exceeded" in str(e):
-                                    print(f"{Fore.RED}Rate limit exceeded...{Fore.WHITE}")
-                                    exit()
+                               log_exception(e, "Fetching Grok Share Post", debug)
 
 
             except Exception as e:
-                print(f"{Fore.RED}Failed to Scrape Grok Share for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                if debug:
-                    # loop through the traceback and print all the lines
-                    print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                    exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                    # Format the traceback
-                    traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                    # Print the formatted traceback
-                    print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                    for line in traceback_details:
-                        print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                if "Rate limit exceeded" in str(e):
-                    print(f"{Fore.RED}Rate limit exceeded...{Fore.WHITE}")
-                    exit()
+               log_exception(e, "Fetching Grok Share Data", debug)
 
     if cfg["GrabCommunity"] == True:
         
@@ -996,7 +830,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     if cursor == "":
                         cursor = None
                     try:
-                        community_response = await app.http.get_community_members_slice(app.http, comunity_id, cursor=cursor)
+                        community_response = await app.http.get_community_members( comunity_id, None, cursor=cursor)
                         cursor = find_objects(community_response, "__typename", "Community", none_value={}).get("members_slice", {}).get("slice_info", {}).get("next_cursor", None)
                         
                         users = find_objects(community_response, "__typename", "User", none_value=[])
@@ -1011,77 +845,28 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         community_members = await app.get_user_info(community_members)
 
                     except Exception as e:
-                        print(f"{Fore.RED}Failed to Fetch Community Members for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                        if debug:
-                            # loop through the traceback and print all the lines
-                            print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                            exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                            # Format the traceback
-                            traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                            # Print the formatted traceback
-                            print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                            for line in traceback_details:
-                                print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                        if "Rate limit exceeded" in str(e):
-                            exit()
+                        log_exception(e, "Fetching Community Members", debug)
                         continue
+                    
                     if len(community_members) == 0:
                         print(f"{Fore.MAGENTA}No Members Found for the Community...{Fore.WHITE}")
                         cursor = None
                         continue
+
                     for member in community_members:
                         role = community_members_role.get(member.id, "Member")
+
                         match role.lower():
                             case "admin":
-                                data_tweet["community"]["admins"].append({
-                                    "role": role,
-                                    "username": member.username,
-                                    "display": member.name,
-                                    "verified": member.verified,
-                                    "protected": member.protected,
-                                    "parody": member.is_parody_account,
-                                    "commentary": member.is_commentary_account,
-                                    "fan": member.is_fan_account,
-                                    "automated": member.is_automated
-                                })
+                                data_tweet["community"]["admins"].append({"role": role} | grab_user_data(member))
                             case "creator":
-                                data_tweet["community"]["creators"].append({
-                                    "role": role,
-                                    "username": member.username,
-                                    "display": member.name,
-                                    "verified": member.verified,
-                                    "protected": member.protected,
-                                    "parody": member.is_parody_account,
-                                    "commentary": member.is_commentary_account,
-                                    "fan": member.is_fan_account,
-                                    "automated": member.is_automated
-                                })
+                                data_tweet["community"]["creators"].append({"role": role} | grab_user_data(member))
                             case "moderator":
-                                data_tweet["community"]["moderators"].append({
-                                    "role": role,
-                                    "username": member.username,
-                                    "display": member.name,
-                                    "verified": member.verified,
-                                    "protected": member.protected,
-                                    "parody": member.is_parody_account,
-                                    "commentary": member.is_commentary_account,
-                                    "fan": member.is_fan_account,
-                                    "automated": member.is_automated
-                                })
+                                data_tweet["community"]["moderators"].append({"role": role} | grab_user_data(member))
                             case _:
-                                data_tweet["community"]["members"].append({
-                                    "role": role,
-                                    "username": member.username,
-                                    "display": member.name,
-                                    "verified": member.verified,
-                                    "protected": member.protected,
-                                    "parody": member.is_parody_account,
-                                    "commentary": member.is_commentary_account,
-                                    "fan": member.is_fan_account,
-                                    "automated": member.is_automated
-                                })
+                                data_tweet["community"]["members"].append({"role": role} | grab_user_data(member))
+
+    
     if cfg["GrabLists"] == True:
         if "list_details" in json.dumps(tweet._raw):
             print(f"{Fore.MAGENTA}List Details Detected and fetching...{Fore.WHITE}")
@@ -1103,16 +888,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                         "member_count": list_data.member_count,
                         "subscriber_count": list_data.subscriber_count,
                         "created_at": str(list_data.created_at),
-                        "admin": {
-                            "username": list_data.admin.username,
-                            "display": list_data.admin.name,
-                            "verified": list_data.admin.verified,
-                            "protected": list_data.admin.protected,
-                            "parody": list_data.admin.is_parody_account,
-                            "commentary": list_data.admin.is_commentary_account,
-                            "fan": list_data.admin.is_fan_account,
-                            "automated": list_data.admin.is_automated
-                        },
+                        "admin": grab_user_data(list_data.admin),
                         "members": [],
                         "subscribers": []
                     })
@@ -1126,93 +902,37 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                             list_users = await app.get_list_member(list_id, cursor=cursor)
                             cursor = list_users.cursor
                         except Exception as e:
-                            print(f"{Fore.RED}Failed to Fetch List Users for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                            if debug:
-                                # loop through the traceback and print all the lines
-                                print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                                exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                                # Format the traceback
-                                traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                                # Print the formatted traceback
-                                print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                                for line in traceback_details:
-                                    print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                            if "Rate limit exceeded" in str(e):
-                                exit()
+                            log_exception(e, "Fetching List Members", debug)
                             continue
+
                         if len(list_users) == 0:
                             print(f"{Fore.MAGENTA}No Users Found for the List...{Fore.WHITE}")
                             cursor = None
                             continue
+
                         for user in list_users:
-                            data_tweet["list_details"][-1]["members"].append({
-                                "username": user.username,
-                                "display": user.name,
-                                "verified": user.verified,
-                                "protected": user.protected,
-                                "parody": user.is_parody_account,
-                                "commentary": user.is_commentary_account,
-                                "fan": user.is_fan_account,
-                                "automated": user.is_automated
-                            })
+                            data_tweet["list_details"][-1]["members"].append(grab_user_data(user))
+
                     cursor = ""
                     print(f"{Fore.MAGENTA}Fetching List Subscribers...{Fore.WHITE}")
                     while cursor != None:
-                        found_subscribers = []
                         if cursor == "":
                             cursor = None
                         try:
-                            list_subscribers = await app.http.get_list_subscribers(app.http, list_id, cursor=cursor)
-                            cursor =  find_objects(list_subscribers, "cursorType", "Bottom", none_value={}).get("value", None)
-                            list_subscribers = find_objects(list_subscribers, "__typename", "User", none_value=[])
-                            # filter out anything but rest_id
-                            # check if list_subscribers is a list if not convert it to a list
-                            if not isinstance(list_subscribers, list):
-                                list_subscribers = [list_subscribers]
-                            if len(list_subscribers) == 0:
-                                print(f"{Fore.MAGENTA}No Subscribers Found for the List...{Fore.WHITE}")
-                                cursor = None
-                                continue
-                            for subscriber in list_subscribers:
-                                subscriber_id = subscriber.get("rest_id", None)
-                                if subscriber_id is not None:
-                                    found_subscribers.append(subscriber["rest_id"])
-                            found_subscribers = await app.get_user_info(found_subscribers)
+                            list_subscribers = await app.get_list_followers(list_id, cursor=cursor)
+                            cursor = list_subscribers.cursor
                         except Exception as e:
-                            print(f"{Fore.RED}Failed to Fetch List Subscribers for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
-                            if debug:
-                                # loop through the traceback and print all the lines
-                                print(f"{Fore.RED}Traceback:{Fore.WHITE}")
-                                exc_type, exc_value, exc_traceback = sys.exc_info()
-
-                                # Format the traceback
-                                traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-                                # Print the formatted traceback
-                                print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
-                                for line in traceback_details:
-                                    print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
-                            if "Rate limit exceeded" in str(e):
-                                exit()
+                            log_exception(e, "Fetching List Subscribers", debug)
                             continue
-                        if len(found_subscribers) == 0:
+
+                        if len(list_subscribers) == 0:
                             print(f"{Fore.MAGENTA}No Subscribers Found for the List...{Fore.WHITE}")
                             cursor = None
                             continue
-                        for subscriber in found_subscribers:
+
+                        for subscriber in list_subscribers:
                             if subscriber != None:
-                                data_tweet["list_details"][-1]["subscribers"].append({
-                                    "username": subscriber.get("username", None),
-                                    "display": subscriber.get("name", None),
-                                    "verified": subscriber.get("verified", None),
-                                    "protected": subscriber.get("protected", None),
-                                    "parody": subscriber.get("is_parody_account", None),
-                                    "commentary": subscriber.get("is_commentary_account", None),
-                                    "fan": subscriber.get("is_fan_account", None),
-                                    "automated": subscriber.get("is_automated", None)
-                                })
+                                data_tweet["list_details"][-1]["subscribers"].append(grab_user_data(subscriber))
                 else:
                     print(f"{Fore.RED}No List Details Found for the Tweet...{Fore.WHITE}")
                     del data_tweet["list_details"]
@@ -1265,6 +985,14 @@ def find_objects(obj, key, value, recursive=True, none_value=None):
 
     return results
 
+'''
+Helper functions to reduce code count
+
+'''
+
+
+
+
 # function used to fetch the target username of who isbeing scraped
 async def fetch_username():
     user = ""
@@ -1299,3 +1027,133 @@ async def confirm_data(msg =""):
             return False
     return True
 
+
+
+# This function does nothing but print a verbose information of the file being downloaded may have error displayed when running
+async def modify_download(file_name, file_size,downloaded_in_bites, verbose=True):
+    # check if the file size is Mb or Kb for the display
+    file_size_type = "B"
+    file_size_type_display = file_size
+    downloaded_in_bites_display = downloaded_in_bites
+    if file_size > 1024:
+        file_size_type = "Kb"
+        file_size_type_display = file_size // 1024
+        downloaded_in_bites_display = downloaded_in_bites // 1024
+    elif file_size > 1024 * 1024:
+        file_size = file_size // (1024 * 1024)
+        file_size_type_display = "Mb"
+        downloaded_in_bites_display = downloaded_in_bites // (1024 * 1024)
+    elif file_size > 1024 * 1024 * 1024:
+        file_size = file_size // (1024 * 1024 * 1024)
+        file_size_type_display = "Gb"
+        downloaded_in_bites_display = downloaded_in_bites // (1024 * 1024 * 1024)
+
+    if file_size == downloaded_in_bites:
+        print(f"{Fore.BLUE}Downloaded {Fore.YELLOW}{file_name} {Fore.MAGENTA}{file_size_type_display}{Fore.BLUE}{file_size_type}{Fore.BLUE} Successfully...{Fore.WHITE}\n")
+    else:
+        if verbose == True:
+            print(f"{Fore.BLUE}Downloading file {Fore.YELLOW}{file_name}  {Fore.MAGENTA}{downloaded_in_bites_display}{Fore.BLUE}{file_size_type}/{Fore.MAGENTA}{file_size_type_display}{Fore.BLUE}{file_size_type}{Fore.WHITE}")
+    return None
+
+async def download_media(media_url, modify_download, verbose=True):
+    # download in the current directory
+    file_name = os.path.basename(media_url)
+    file_name = os.path.join(os.getcwd(), file_name)
+    # download the file
+    try:
+        response = requests.get(media_url, stream=True)
+        file_size = int(response.headers.get('content-length', 0))
+        with open(file_name, 'wb') as file:
+            downloaded_in_bites = 0
+            for data in response.iter_content(chunk_size=1024):
+                file.write(data)
+                downloaded_in_bites += len(data)
+                await modify_download(os.path.basename(file_name), file_size, downloaded_in_bites, verbose)
+    except Exception as e:
+        print(f"{Fore.RED}Failed to download {Fore.YELLOW}{media_url} {Fore.RED}to {Fore.YELLOW}{file_name} {Fore.RED}due to {Fore.MAGENTA}{e}{Fore.WHITE}")
+        return None
+    return os.path.basename(file_name)
+
+
+def grab_user_data(user):
+    return {
+        "username": user.get("username", None),
+        "display": user.get("name", None),
+        "verified": user.get("verified", None),
+        "protected": user.get("protected", None),
+        "parody": user.get("is_parody_account", None),
+        "commentary": user.get("is_commentary_account", None),
+        "fan": user.get("is_fan_account", None),
+        "automated": user.get("is_automated", None)
+    }
+
+async def check_afiliate_and_community(tweet, data, path_name, current_id, cfg, debug):
+
+        afiliate_label = find_objects(tweet._raw, "userLabelDisplayType", "Badge", none_value={})
+
+        if afiliate_label != {}:
+            # check if afiliate_label is a list or a dict
+            if isinstance(afiliate_label, list):
+                afiliate_label = afiliate_label[0]
+            print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
+            print(f"{Fore.MAGENTA}Found Affiliate Label...{Fore.WHITE}")
+            data["affiliate"] = {
+                "url": afiliate_label["url"]["url"],
+                "badge": afiliate_label["badge"]["url"],
+                "description": afiliate_label["description"],
+                "user_label_type": afiliate_label["userLabelType"],
+                "user_label_display_type": afiliate_label["userLabelDisplayType"]
+            }
+
+            if cfg["GrabMedia"] == True:
+                print(f"{Fore.MAGENTA}Downloading Affiliate Label Media...{Fore.WHITE}")
+                # download the media
+                try:
+                    file_name = await download_media(afiliate_label["badge"]["url"], modify_download)
+                    shutil.copyfile(base_path + file_name, path_name + "media" + os.sep + current_id + os.sep + file_name)
+                    os.remove(base_path + file_name)
+                    data["affiliate"]["badge_file_name"] = file_name
+                except Exception as e:
+                    log_exception(e, "Downloading Affiliate Label Media for Retweet User", debug)
+
+        if "community" in tweet.__dict__:
+            community = tweet.get("community", None)
+            if community is None:
+                return
+            data["community"] = community.get("name", None)
+            data["community_role"] = community.get("role", None)
+
+
+# Function used to confirm messages
+async def confirm_data(msg =""):
+
+    confirm = ""
+    while confirm == "":
+        confirm = input(f"\n{Fore.WHITE}{msg} {Fore.WHITE}({Fore.GREEN}y{Fore.WHITE}/{Fore.RED}n{Fore.WHITE}): ")
+        confirm = confirm.lower()
+        if confirm != "n" and confirm != "y":
+            confirm = ""
+            print(f"{Fore.RED}Invalid Response Type trying again...{Fore.WHITE}")
+            continue
+        if confirm == "n":
+            confirm = ""
+            return False
+    return True
+
+def log_exception(e, msg=None, debug=False):
+    print(f"{Fore.RED}Failed to {msg} for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
+    if debug:                
+        # loop through the traceback and print all the lines
+        print(f"{Fore.RED}Traceback:{Fore.WHITE}")
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+        # Format the traceback
+        traceback_details = traceback.format_exception(exc_type, exc_value, exc_traceback)
+
+        # Print the formatted traceback
+        print(f"{Fore.RED}An error occurred:{Fore.WHITE}")
+        for line in traceback_details:
+            print(f"{Fore.YELLOW}{line}{Fore.WHITE}", end='')
+
+    if "Rate limit exceeded" in str(e):
+        exit()
