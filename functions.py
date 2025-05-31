@@ -963,7 +963,6 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     exit()
 
     if cfg["GrabCommunity"] == True:
-        
         if "community_details" in json.dumps(tweet._raw):
             print("Comunity_details detected in tweet._raw, fetching community data...")
             data_tweet["community"] = {}
@@ -996,20 +995,8 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     if cursor == "":
                         cursor = None
                     try:
-                        community_response = await app.http.get_community_members_slice(app.http, comunity_id, cursor=cursor)
-                        cursor = find_objects(community_response, "__typename", "Community", none_value={}).get("members_slice", {}).get("slice_info", {}).get("next_cursor", None)
-                        
-                        users = find_objects(community_response, "__typename", "User", none_value=[])
-                        if not isinstance(users, list):
-                            users = [users]
-                        if users != []:
-                            for user in users:
-                                user_id = user.get("rest_id", None)
-                                if user_id is not None:
-                                    community_members.append(user_id)
-                                    community_members_role[user_id]= user['community_role']
-                        community_members = await app.get_user_info(community_members)
-
+                        community_members = await app.get_community_members(comunity_id, cursor=cursor)
+                        cursor = community_members.cursor
                     except Exception as e:
                         print(f"{Fore.RED}Failed to Fetch Community Members for the following reason: {Fore.YELLOW}{e}{Fore.WHITE}")
                         if debug:
@@ -1082,6 +1069,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                                     "fan": member.is_fan_account,
                                     "automated": member.is_automated
                                 })
+
     if cfg["GrabLists"] == True:
         if "list_details" in json.dumps(tweet._raw):
             print(f"{Fore.MAGENTA}List Details Detected and fetching...{Fore.WHITE}")
