@@ -96,17 +96,4 @@ def inject_functions_to_api(app):
             response = await self.__get_response__(**response_data)
             return response
         app.http.get_broadcast_by_id = get_broadcast_by_id
-    if hasattr(app.http._builder, 'get_community_members_slice') == False:
-        def get_community_members_slice(self, community_id, cursor=None):
-            variables = {'communityId': community_id, 'cursor': cursor}
-            features = {'responsive_web_graphql_timeline_navigation_enabled': True}
-            params = {'variables': str(json.dumps(variables, separators=(",", ":"))), 
-                        'features': str(json.dumps(features, separators=(",", ":")))}
-            return {'headers': {}, 'method': "GET", 'url': "https://x.com/i/api/graphql/gwNDrhzDr9kuoulEqgSQcQ/membersSliceTimeline_Query", 'params': params}
-        app.http._builder.get_community_members_slice = get_community_members_slice
-        async def get_community_members_slice(self, community_id, cursor=None):
-            request_data = self._builder.get_community_members_slice(self._builder, community_id, cursor)
-            response = await self.__get_response__(**request_data)
-            return response
-        app.http.get_community_members_slice = get_community_members_slice
     return app
