@@ -14,7 +14,8 @@ from tweety import TwitterAsync
 from tweety.filters import SearchFilters
 from functions import modify_tweet, fetch_username, confirm_data
 
-DEBUG_LOGGING = True
+
+DEBUG_LOGGING = False
 MIXIN_HTTP = ["get_grok_conversation_by_uid", "get_broadcast_by_id"]
 async def main():
     # Defines Paths for the app to use for path traversial
