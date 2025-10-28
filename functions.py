@@ -287,6 +287,34 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                     data_tweet["tweets_quoting"].append(tweetquotes)
 
 
+    if cfg["GrabProposedNotes"] == True:
+        notes = await tweet.get_all_community_notes()
+        if type(notes) is not list:
+            notes = [notes]
+        if type(notes) is list and len(notes) != 0:
+            print(f"{Fore.MAGENTA}Found Community Notes Proposed Notes Found...{Fore.WHITE}")
+        for note in notes:
+            print(f"{Fore.MAGENTA}Found Proposed Note id: {Fore.YELLOW}{note.id}{Fore.MAGENTA} and formatting...{Fore.WHITE}")
+            if "proposed_notes" not in data_tweet:
+                data_tweet["proposed_notes"] = []
+            data_tweet["proposed_notes"].append({
+                "id": note.id,
+                "created_at": str(note.created_at),
+                "text": note.text,
+                "apeal_status": note.appeal_status,
+                "can_appeal": note.can_appeal,
+                "decided_by": note.decided_by,
+                "helpful_tags": note.helpful_tags,
+                "is_visable": note.get("is_visable", None),
+                "ranking_status": note.get("ranking_status", None),
+                "rating_survey_url": note.rating_survey_url,
+                "tweet_id": note.tweet_id,
+                "classification": note.classification,
+                "misleading_tags": note.misleading_tags,
+                "not_misleading_tags": note.not_misleading_tags,
+                "trustworthy_sources": note.trustworthy_sources,
+                "entities": note.entities
+            })
     if cfg["GrabRetweetedBy"] == True:
         data_tweet["retweet_users"] = []
         # Checks if tweet has any retweets and tries to download the user list
@@ -328,7 +356,7 @@ async def modify_tweet(tweet, subtweet=False, parent_id=None, path_name=None, pa
                 log_exception(e, "Fetching Replied To Tweet", debug)
 
     if cfg["GrabPolls"] == True:
-    # Checks if tweet Poll exists in tweet
+        # Checks if tweet Poll exists in tweet
         if tweet.pool != None:
             print(f"{Fore.MAGENTA}Poll Detected and fetching...")
             data_tweet["poll_data"] = {}
